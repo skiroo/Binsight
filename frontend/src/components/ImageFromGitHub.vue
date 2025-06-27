@@ -9,7 +9,7 @@ const fetchImages = async () => {
   loading.value = true
   error.value = null
   try {
-    const res = await fetch('http://localhost:5001/api/github_images')
+    const res = await fetch('http://localhost:5000/api/github_images')
     const data = await res.json()
     if (data.error) throw new Error(data.error)
     images.value = data

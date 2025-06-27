@@ -7,7 +7,7 @@ const message = ref('')
 
 const fetchImages = async () => {
   try {
-    const res = await fetch('http://localhost:5001/api/images')
+    const res = await fetch('http://localhost:5000/api/images')
     const data = await res.json()
     images.value = data.images
   } catch (error) {
@@ -26,7 +26,7 @@ const uploadImage = async () => {
   formData.append('image', selectedFile.value)
 
   try {
-    const res = await fetch('http://localhost:5001/', {
+    const res = await fetch('http://localhost:5000/', {
       method: 'POST',
       body: formData
     })
@@ -63,7 +63,7 @@ onMounted(fetchImages)
       </thead>
       <tbody>
       <tr v-for="(img, index) in images" :key="index">
-        <td><img :src="`http://localhost:5001/static/uploads/${img.filename}`" width="100"/></td>
+        <td><img :src="`http://localhost:5000/static/uploads/${img.filename}`" width="100"/></td>
         <td>{{ img.width }} × {{ img.height }}</td>
         <td>{{ img.size_kb }}</td>
         <td :style="{ backgroundColor: `rgb${img.mean_color}` }">{{ img.mean_color }}</td>

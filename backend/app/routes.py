@@ -53,28 +53,24 @@ def upload_image():
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
     file.save(save_path)
 
-    # Étape 1 : extraire les caractéristiques
     features = extraire_caracteristiques(save_path)
 
-    # Étape 2 : appliquer la règle de classification
     if features['moyenne_rouge'] < 100 and features['taille_ko'] > 2000:
         label = 'pleine'
     else:
         label = 'vide'
 
-    # Étape 3 : enregistrer l'image dans la BDD
     image = Image(
         fichier_nom=filename,
         chemin_stockage=save_path,
         date_upload=datetime.utcnow(),
-        utilisateur_id=1,  # à adapter plus tard
+        utilisateur_id=1,  # À adapter
         source='citoyen',
         classification_auto=label
     )
     db.session.add(image)
     db.session.commit()
 
-    # Étape 4 : enregistrer les caractéristiques
     caract = CaracteristiquesImage(
         id=image.id,
         taille_ko=features['taille_ko'],
@@ -114,18 +110,14 @@ def classify_image(image_id):
 # Route pour ajouter une localisation à une image
 @routes.route('/localisation/<int:image_id>', methods=['POST'])
 def ajouter_localisation(image_id):
-    # Vérifier que l’image existe
     image = Image.query.get(image_id)
     if not image:
         return jsonify({'success': False, 'message': 'Image non trouvée'}), 404
 
-    # Vérifier qu’une localisation n’existe pas déjà
     if image.localisation:
-        return jsonify({'success': False, 'message': 'Localisation déjà existante pour cette image'}), 400
+        return jsonify({'success': False, 'message': 'Localisation déjà existante'}), 400
 
     data = request.get_json()
-
-    # Vérifie les champs requis (exemple simple)
     champs_attendus = ['longitude', 'latitude', 'numero_rue', 'nom_rue', 'ville', 'code_postal', 'pays']
     if not all(champ in data for champ in champs_attendus):
         return jsonify({'success': False, 'message': 'Champs manquants dans la requête'}), 400
@@ -146,7 +138,7 @@ def ajouter_localisation(image_id):
     return jsonify({'success': True, 'message': 'Localisation ajoutée avec succès'})
 
 
-# Route pour obtenir la liste des images avec leurs caractéristiques et localisations
+# Route pour obtenir la liste des images avec caractéristiques + localisation
 @routes.route('/images', methods=['GET'])
 def get_images():
     images = Image.query.all()
@@ -162,14 +154,12 @@ def get_images():
             'etat_annot': img.etat_annot,
             'classification_auto': img.classification_auto,
             'date_upload': img.date_upload.isoformat(),
-
             'caracteristiques': {
                 'taille_ko': caract.taille_ko if caract else None,
                 'moyenne_rouge': caract.moyenne_rouge if caract else None,
                 'moyenne_vert': caract.moyenne_vert if caract else None,
                 'moyenne_bleu': caract.moyenne_bleu if caract else None
             },
-
             'localisation': {
                 'ville': loc.ville if loc else None,
                 'code_postal': loc.code_postal if loc else None,
@@ -181,65 +171,65 @@ def get_images():
     return jsonify(result)
 
 
-# # Route pour afficher la galerie des images
-# @routes.route('/galerie')
-# def galerie():
-#     images = Image.query.all()
+# Route HTML : galerie
+@routes.route('/galerie')
+def galerie():
+    images = Image.query.all()
 
-#     html = """
-#     <html>
-#     <head>
-#         <title>Galerie des images</title>
-#         <style>
-#             body { font-family: sans-serif; background: #f4f4f4; padding: 20px; }
-#             .image-box {
-#                 display: inline-block;
-#                 border: 2px solid #ccc;
-#                 border-radius: 10px;
-#                 margin: 10px;
-#                 padding: 10px;
-#                 background: white;
-#                 width: 200px;
-#                 vertical-align: top;
-#                 text-align: center;
-#             }
-#             .pleine { border-color: red; }
-#             .vide { border-color: green; }
-#             img { max-width: 100%; border-radius: 5px; }
-#         </style>
-#     </head>
-#     <body>
-#         <h1>🗑️ Galerie des images classées</h1>
-#         {% for img in images %}
-#         <div class="image-box {{ img.classification_auto }}">
-#             <img src="/data/{{ img.chemin_stockage.split('data')[-1] }}" alt="{{ img.fichier_nom }}">
-#             <p><strong>{{ img.fichier_nom }}</strong></p>
-#             <p>
-#                 {% if img.classification_auto %}
-#                     Classée : {{ img.classification_auto }}
-#                 {% else %}
-#                     Non classée
-#                 {% endif %}
-#             </p>
-#         </div>
-#         {% endfor %}
-#     </body>
-#     </html>
-#     """
-
-#     return render_template_string(html, images=images)
-
-
-# @routes.route('/data/<path:filename>')
-# def serve_data_image(filename):
-#     root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-#     return send_from_directory(os.path.join(root_path, 'data'), filename)
+    html = """
+    <html>
+    <head>
+        <title>Galerie des images</title>
+        <style>
+            body { font-family: sans-serif; background: #f4f4f4; padding: 20px; }
+            .image-box {
+                display: inline-block;
+                border: 2px solid #ccc;
+                border-radius: 10px;
+                margin: 10px;
+                padding: 10px;
+                background: white;
+                width: 200px;
+                vertical-align: top;
+                text-align: center;
+            }
+            .pleine { border-color: red; }
+            .vide { border-color: green; }
+            img { max-width: 100%; border-radius: 5px; }
+        </style>
+    </head>
+    <body>
+        <h1>🗑️ Galerie des images classées</h1>
+        {% for img in images %}
+        <div class="image-box {{ img.classification_auto }}">
+            <img src="/data/{{ img.chemin_stockage.split('data')[-1] }}" alt="{{ img.fichier_nom }}">
+            <p><strong>{{ img.fichier_nom }}</strong></p>
+            <p>
+                {% if img.classification_auto %}
+                    Classée : {{ img.classification_auto }}
+                {% else %}
+                    Non classée
+                {% endif %}
+            </p>
+        </div>
+        {% endfor %}
+    </body>
+    </html>
+    """
+    return render_template_string(html, images=images)
 
 
-# Route pour la page d'accueil
+# Route pour servir les images via /data/<filename>
+@routes.route('/data/<path:filename>')
+def serve_data_image(filename):
+    root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+    return send_from_directory(os.path.join(root_path, 'data'), filename)
+
+
+# Page d'accueil simple
 @routes.route('/')
 def home():
-    welcome_msg = "<h1>VISIO</h1>" \
-    "<h2>Bienvenue sur l'API de la plateforme intelligente de suivi des poubelles</h2>"
-
-    return welcome_msg
+    return """
+    <h1>VISIO</h1>
+    <h2>Bienvenue sur l'API de la plateforme intelligente de suivi des poubelles</h2>
+    """
