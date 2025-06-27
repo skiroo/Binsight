@@ -55,9 +55,9 @@ Ce projet intègre l’IA afin de mettre en place une plateforme web capable de 
 ### Exigences Techniques : Quelles technologies doivent être utilisées ? Quels sont les langages de programmation, les frameworks, les bases de données, etc., requis ?
 - **Back-end :** Python (Flask,  Django, etc.),
 - **Gestion des images :** Pillow, os, shutil,…
-- Base de données : SQLite / PostgreSQL,…
-- Front-end : HTML/CSS + Bootstrap (ou autre), Chart.js (pour les graphes dynamiques),
-- Visualisation : matplotlib (Python) ou Chart.js (web).
+- **Base de données :** SQLite / PostgreSQL,…
+- **Front-end :** HTML/CSS + Bootstrap (ou autre), Chart.js (pour les graphes dynamiques),
+- **Visualisation :** matplotlib (Python) ou Chart.js (web).
 
 ### Critères d'Évaluation : Comment les soumissions seront-elles évaluées ? Quels sont les critères de sélection utilisés ?
 Trame d’évaluation technique
