@@ -1,0 +1,9 @@
+dotenv
+flask
+flask-mysqldb
+flask-cors
+flask-sqlalchemy
+psycopg2-binary
+pillow
+opencv-python
+numpy

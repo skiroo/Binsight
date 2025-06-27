@@ -1,28 +1,30 @@
-from flask import Flask, jsonify
-from flask_cors import CORS
-import requests
+from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
+from dotenv import load_dotenv
+import os
 
-app = Flask(__name__)
-CORS(app)
+from model.models import db
 
-@app.route('/api/github_images')
-def github_images():
-    try:
-        github_api_url = "https://api.github.com/repos/AGhaziBla/Solution_Factory_Data/contents/Data/test"
-        response = requests.get(github_api_url)
-        response.raise_for_status()  # lève une exception si erreur HTTP
+def create_app():
 
-        content = response.json()
-        images = []
+    # Charger les variables d'environnement depuis .env
+    load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', 'database', '.env'))
+    
+    # Créer l'app Flask
+    app = Flask(__name__)
 
-        for item in content:
-            if item['type'] == 'file' and item['name'].lower().endswith(('.jpg', '.jpeg', '.png')):
-                images.append(item['download_url'])
+    # Charger la config depuis config.py
+    app.config.from_object('database.config.Config')
 
-        return jsonify(images)
+    # Initialiser SQLAlchemy avec l'app
+    db.init_app(app)
 
-    except Exception as e:
-        return jsonify({"error": "Impossible de charger les images", "details": str(e)}), 500
+    # Importer et enregistrer les routes
+    from app.routes import routes
+    app.register_blueprint(routes)
 
-if __name__ == '__main__':
-    app.run(port=5001, debug=True)
+    # Créer les tables si elles n'existent pas
+    with app.app_context():
+        db.create_all()
+
+    return app
