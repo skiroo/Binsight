@@ -1,20 +1,23 @@
-# Libraries
-from flask import *
+from flask import Blueprint, request, jsonify, render_template_string, send_from_directory
 from werkzeug.utils import secure_filename
+from model.models import db, Image, CaracteristiquesImage, Localisation
 from datetime import datetime
 from PIL import Image as PILImage
-import os
 import numpy as np
-from model.models import *
+import os
+
+from app.utils.rules import appliquer_regles_sur_image, classifier_avec_ia
 
 routes = Blueprint('routes', __name__)
 
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'uploads')
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 
+
 # Vérifie que l'image a une extension correcte
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
 
 # Fonction pour extraire les caractéristiques simples d'une image
 def extraire_caracteristiques(image_path):
@@ -27,6 +30,14 @@ def extraire_caracteristiques(image_path):
         moyenne_vert = int(np.mean(np_img[:, :, 1]))
         moyenne_bleu = int(np.mean(np_img[:, :, 2]))
 
+        ecart_rouge = float(np.std(np_img[:, :, 0]))
+        ecart_vert = float(np.std(np_img[:, :, 1]))
+        ecart_bleu = float(np.std(np_img[:, :, 2]))
+
+        med_rouge = int(np.median(np_img[:, :, 0]))
+        med_vert = int(np.median(np_img[:, :, 1]))
+        med_bleu = int(np.median(np_img[:, :, 2]))
+
         taille_ko = round(os.path.getsize(image_path) / 1024, 2)
 
         return {
@@ -35,8 +46,15 @@ def extraire_caracteristiques(image_path):
             'largeur': largeur,
             'moyenne_rouge': moyenne_rouge,
             'moyenne_vert': moyenne_vert,
-            'moyenne_bleu': moyenne_bleu
+            'moyenne_bleu': moyenne_bleu,
+            'ecart_rouge': ecart_rouge,
+            'ecart_vert': ecart_vert,
+            'ecart_bleu': ecart_bleu,
+            'med_rouge': med_rouge,
+            'med_vert': med_vert,
+            'med_bleu': med_bleu
         }
+
 
 # Route pour uploader une image et la classifier automatiquement
 @routes.route('/upload', methods=['POST'])
@@ -56,11 +74,8 @@ def upload_image():
     # Étape 1 : extraire les caractéristiques
     features = extraire_caracteristiques(save_path)
 
-    # Étape 2 : appliquer la règle de classification
-    if features['moyenne_rouge'] < 100 and features['taille_ko'] > 2000:
-        label = 'pleine'
-    else:
-        label = 'vide'
+    # Étape 2 : appliquer la classification avec IA
+    label, msg = classifier_avec_ia(features)
 
     # Étape 3 : enregistrer l'image dans la BDD
     image = Image(
@@ -88,20 +103,23 @@ def upload_image():
     db.session.commit()
 
     return jsonify({
-        'message': 'Image uploadée, analysée et classée automatiquement',
+        'message': msg,
         'classification_auto': label
     })
 
 
 # Route pour classifier une image existante
-from app.utils.rules import appliquer_regles_sur_image
-
-@routes.route('/classify/<int:image_id>', methods=['POST'])
+@routes.route('/classify/<int:image_id>', methods=['GET', 'POST'])
 def classify_image(image_id):
     label, message = appliquer_regles_sur_image(image_id)
 
     if label is None:
         return jsonify({'success': False, 'message': message}), 404
+
+    if request.method == 'GET':
+        return jsonify({
+            'message': 'Cette route doit être utilisée en POST pour une classification correcte.'
+        })
 
     return jsonify({
         'success': True,
@@ -111,135 +129,61 @@ def classify_image(image_id):
     }), 200
 
 
-# Route pour ajouter une localisation à une image
-@routes.route('/localisation/<int:image_id>', methods=['POST'])
-def ajouter_localisation(image_id):
-    # Vérifier que l’image existe
+# Route pour annoter manuellement une image
+@routes.route('/annotate/<int:image_id>', methods=['POST'])
+def annotate_image(image_id):
     image = Image.query.get(image_id)
     if not image:
-        return jsonify({'success': False, 'message': 'Image non trouvée'}), 404
-
-    # Vérifier qu’une localisation n’existe pas déjà
-    if image.localisation:
-        return jsonify({'success': False, 'message': 'Localisation déjà existante pour cette image'}), 400
+        return jsonify({'error': 'Image non trouvée'}), 404
 
     data = request.get_json()
+    etat = data.get('etat')
+    if etat not in ['pleine', 'vide']:
+        return jsonify({'error': 'Valeur d’annotation invalide'}), 400
 
-    # Vérifie les champs requis (exemple simple)
-    champs_attendus = ['longitude', 'latitude', 'numero_rue', 'nom_rue', 'ville', 'code_postal', 'pays']
-    if not all(champ in data for champ in champs_attendus):
-        return jsonify({'success': False, 'message': 'Champs manquants dans la requête'}), 400
-
-    localisation = Localisation(
-        image_id=image_id,
-        longitude=data['longitude'],
-        latitude=data['latitude'],
-        numero_rue=data['numero_rue'],
-        nom_rue=data['nom_rue'],
-        ville=data['ville'],
-        code_postal=data['code_postal'],
-        pays=data['pays']
-    )
-    db.session.add(localisation)
+    image.etat_annot = etat
     db.session.commit()
+    return jsonify({'message': f"Annotation enregistrée : {etat}"}), 200
 
-    return jsonify({'success': True, 'message': 'Localisation ajoutée avec succès'})
+
+# Route pour récupérer les stats globales
+@routes.route('/stats', methods=['GET'])
+def stats():
+    total = Image.query.count()
+    pleines = Image.query.filter_by(classification_auto='pleine').count()
+    vides = Image.query.filter_by(classification_auto='vide').count()
+    return jsonify({
+        'total_images': total,
+        'pleines': pleines,
+        'vides': vides,
+        'pleines_%': round(pleines / total * 100, 2) if total else 0,
+        'vides_%': round(vides / total * 100, 2) if total else 0
+    })
 
 
-# Route pour obtenir la liste des images avec leurs caractéristiques et localisations
+# Route pour réentraîner le modèle
+@routes.route('/train', methods=['POST'])
+def entrainer():
+    os.system('python app/utils/train_model.py')
+    return jsonify({'message': 'Modèle réentraîné'}), 200
+
+
+# Route pour récupérer les image
 @routes.route('/images', methods=['GET'])
 def get_images():
     images = Image.query.all()
-    result = []
-
-    for img in images:
-        caract = img.caracteristiques
-        loc = img.localisation
-
-        result.append({
-            'id': img.id,
-            'fichier_nom': img.fichier_nom,
-            'etat_annot': img.etat_annot,
-            'classification_auto': img.classification_auto,
-            'date_upload': img.date_upload.isoformat(),
-
-            'caracteristiques': {
-                'taille_ko': caract.taille_ko if caract else None,
-                'moyenne_rouge': caract.moyenne_rouge if caract else None,
-                'moyenne_vert': caract.moyenne_vert if caract else None,
-                'moyenne_bleu': caract.moyenne_bleu if caract else None
-            },
-
-            'localisation': {
-                'ville': loc.ville if loc else None,
-                'code_postal': loc.code_postal if loc else None,
-                'latitude': loc.latitude if loc else None,
-                'longitude': loc.longitude if loc else None
-            }
-        })
-
+    result = [{
+        'id': i.id,
+        'fichier_nom': i.fichier_nom,
+        'etat_annot': i.etat_annot,
+        'classification_auto': i.classification_auto
+    } for i in images]
     return jsonify(result)
-
-
-# # Route pour afficher la galerie des images
-# @routes.route('/galerie')
-# def galerie():
-#     images = Image.query.all()
-
-#     html = """
-#     <html>
-#     <head>
-#         <title>Galerie des images</title>
-#         <style>
-#             body { font-family: sans-serif; background: #f4f4f4; padding: 20px; }
-#             .image-box {
-#                 display: inline-block;
-#                 border: 2px solid #ccc;
-#                 border-radius: 10px;
-#                 margin: 10px;
-#                 padding: 10px;
-#                 background: white;
-#                 width: 200px;
-#                 vertical-align: top;
-#                 text-align: center;
-#             }
-#             .pleine { border-color: red; }
-#             .vide { border-color: green; }
-#             img { max-width: 100%; border-radius: 5px; }
-#         </style>
-#     </head>
-#     <body>
-#         <h1>🗑️ Galerie des images classées</h1>
-#         {% for img in images %}
-#         <div class="image-box {{ img.classification_auto }}">
-#             <img src="/data/{{ img.chemin_stockage.split('data')[-1] }}" alt="{{ img.fichier_nom }}">
-#             <p><strong>{{ img.fichier_nom }}</strong></p>
-#             <p>
-#                 {% if img.classification_auto %}
-#                     Classée : {{ img.classification_auto }}
-#                 {% else %}
-#                     Non classée
-#                 {% endif %}
-#             </p>
-#         </div>
-#         {% endfor %}
-#     </body>
-#     </html>
-#     """
-
-#     return render_template_string(html, images=images)
-
-
-# @routes.route('/data/<path:filename>')
-# def serve_data_image(filename):
-#     root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-#     return send_from_directory(os.path.join(root_path, 'data'), filename)
 
 
 # Route pour la page d'accueil
 @routes.route('/')
 def home():
-    welcome_msg = "<h1>VISIO</h1>" \
-    "<h2>Bienvenue sur l'API de la plateforme intelligente de suivi des poubelles</h2>"
-
-    return welcome_msg
+    welcome = "<h1>VISIO</h1>" \
+              "<h2>Bienvenue sur l'API de la plateforme intelligente de suivi des poubelles</h2>"
+    return welcome
