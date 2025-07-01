@@ -41,6 +41,9 @@ class CaracteristiquesImage(db.Model):
     contraste = db.Column(db.Float)
     histogramme = db.Column(db.Text)
     contours_detectes = db.Column(db.Boolean)
+    luminance_moyenne = db.Column(db.Float)
+    dark_pixel_ratio = db.Column(db.Float)
+    texture_score = db.Column(db.Float)
 
     image = db.relationship('Image', backref=db.backref('caracteristiques', uselist=False))
 

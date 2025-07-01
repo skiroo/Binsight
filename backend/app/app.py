@@ -1,29 +1,28 @@
 from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
+from flask_cors import CORS
 from dotenv import load_dotenv
 import os
 
-from model.models import db
+from database.utils.db_model import db
+from app.extensions import bcrypt  # 🔁 on importe ici maintenant
+from app.routes import routes
+from app.auth_routes import auth_routes  # si tu l’utilises
 
 def create_app():
-
-    # Charger les variables d'environnement depuis .env
     load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', 'database', '.env'))
-    
-    # Créer l'app Flask
-    app = Flask(__name__)
 
-    # Charger la config depuis config.py
+    app = Flask(__name__)   
     app.config.from_object('database.config.Config')
+    app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024
 
-    # Initialiser SQLAlchemy avec l'app
+    CORS(app)
+
     db.init_app(app)
+    bcrypt.init_app(app)  # 🔐 initialisation ici
 
-    # Importer et enregistrer les routes
-    from app.routes import routes
     app.register_blueprint(routes)
+    app.register_blueprint(auth_routes)
 
-    # Créer les tables si elles n'existent pas
     with app.app_context():
         db.create_all()
 

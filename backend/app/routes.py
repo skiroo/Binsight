@@ -1,62 +1,24 @@
-from flask import Blueprint, request, jsonify, render_template_string, send_from_directory
-from werkzeug.utils import secure_filename
-from model.models import db, Image, CaracteristiquesImage, Localisation
-from datetime import datetime
+from flask import Blueprint, request, jsonify
 from PIL import Image as PILImage
-import numpy as np
+from werkzeug.utils import secure_filename
+from datetime import datetime
 import os
 
-from app.utils.rules import appliquer_regles_sur_image, classifier_avec_ia
+from app.utils.rules import appliquer_regles_sur_image
+from app.extensions import bcrypt
+from database.utils.db_model import db, Image, RegleClassification, CaracteristiquesImage, Utilisateur
+from database.utils.db_insert import traiter_image
 
 routes = Blueprint('routes', __name__)
 
-UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'uploads')
+UPLOAD_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'uploads'))
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 
 
-# Vérifie que l'image a une extension correcte
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
-# Fonction pour extraire les caractéristiques simples d'une image
-def extraire_caracteristiques(image_path):
-    with PILImage.open(image_path) as img:
-        img = img.convert('RGB')
-        np_img = np.array(img)
-        hauteur, largeur = img.height, img.width
-
-        moyenne_rouge = int(np.mean(np_img[:, :, 0]))
-        moyenne_vert = int(np.mean(np_img[:, :, 1]))
-        moyenne_bleu = int(np.mean(np_img[:, :, 2]))
-
-        ecart_rouge = float(np.std(np_img[:, :, 0]))
-        ecart_vert = float(np.std(np_img[:, :, 1]))
-        ecart_bleu = float(np.std(np_img[:, :, 2]))
-
-        med_rouge = int(np.median(np_img[:, :, 0]))
-        med_vert = int(np.median(np_img[:, :, 1]))
-        med_bleu = int(np.median(np_img[:, :, 2]))
-
-        taille_ko = round(os.path.getsize(image_path) / 1024, 2)
-
-        return {
-            'taille_ko': taille_ko,
-            'hauteur': hauteur,
-            'largeur': largeur,
-            'moyenne_rouge': moyenne_rouge,
-            'moyenne_vert': moyenne_vert,
-            'moyenne_bleu': moyenne_bleu,
-            'ecart_rouge': ecart_rouge,
-            'ecart_vert': ecart_vert,
-            'ecart_bleu': ecart_bleu,
-            'med_rouge': med_rouge,
-            'med_vert': med_vert,
-            'med_bleu': med_bleu
-        }
-
-
-# Route pour uploader une image et la classifier automatiquement
 @routes.route('/upload', methods=['POST'])
 def upload_image():
     if 'image' not in request.files:
@@ -66,60 +28,49 @@ def upload_image():
     if file.filename == '' or not allowed_file(file.filename):
         return jsonify({'error': 'Fichier invalide'}), 400
 
-    filename = secure_filename(file.filename)
-    save_path = os.path.join(UPLOAD_FOLDER, filename)
+    # Nom de fichier sans extension
+    original_filename = secure_filename(file.filename)
+    basename = os.path.splitext(original_filename)[0]
+    filename = basename + ".webp"
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-    file.save(save_path)
+    save_path = os.path.join(UPLOAD_FOLDER, filename)
 
-    # Étape 1 : extraire les caractéristiques
-    features = extraire_caracteristiques(save_path)
+    try:
+        # Compression + conversion WebP (Green IT)
+        img = PILImage.open(file.stream).convert("RGB")
+        img.thumbnail((1024, 1024))  # Redimensionnement max
+        img.save(save_path, format='WEBP', quality=80, method=6)
 
-    # Étape 2 : appliquer la classification avec IA
-    label, msg = classifier_avec_ia(features)
+        mode = request.form.get('mode_classification', 'auto')
+        if mode == 'manuel':
+            image_id, label, msg = traiter_image(save_path)
+            label = None
+            msg = "Aucune classification automatique effectuée."
+        elif mode == 'auto':
+            image_id, label, msg = traiter_image(save_path)
+        elif mode == 'ia':
+            image_id, label, msg = traiter_image(save_path)
+            label, msg = "non supporté", "Classification IA non encore disponible"
+        else:
+            image_id, label, msg = traiter_image(save_path)
+            label, msg = None, f"Mode de classification inconnu : {mode}"
 
-    # Étape 3 : enregistrer l'image dans la BDD
-    image = Image(
-        fichier_nom=filename,
-        chemin_stockage=save_path,
-        date_upload=datetime.utcnow(),
-        utilisateur_id=1,  # à adapter plus tard
-        source='citoyen',
-        classification_auto=label
-    )
-    db.session.add(image)
-    db.session.commit()
+        return jsonify({
+            'message': msg,
+            'image_id': image_id,
+            'classification_auto': label
+        })
 
-    # Étape 4 : enregistrer les caractéristiques
-    caract = CaracteristiquesImage(
-        id=image.id,
-        taille_ko=features['taille_ko'],
-        hauteur=features['hauteur'],
-        largeur=features['largeur'],
-        moyenne_rouge=features['moyenne_rouge'],
-        moyenne_vert=features['moyenne_vert'],
-        moyenne_bleu=features['moyenne_bleu']
-    )
-    db.session.add(caract)
-    db.session.commit()
-
-    return jsonify({
-        'message': msg,
-        'classification_auto': label
-    })
+    finally:
+        if os.path.exists(save_path):
+            os.remove(save_path)
 
 
-# Route pour classifier une image existante
-@routes.route('/classify/<int:image_id>', methods=['GET', 'POST'])
+@routes.route('/classify/<int:image_id>', methods=['POST'])
 def classify_image(image_id):
     label, message = appliquer_regles_sur_image(image_id)
-
     if label is None:
         return jsonify({'success': False, 'message': message}), 404
-
-    if request.method == 'GET':
-        return jsonify({
-            'message': 'Cette route doit être utilisée en POST pour une classification correcte.'
-        })
 
     return jsonify({
         'success': True,
@@ -129,7 +80,6 @@ def classify_image(image_id):
     }), 200
 
 
-# Route pour annoter manuellement une image
 @routes.route('/annotate/<int:image_id>', methods=['POST'])
 def annotate_image(image_id):
     image = Image.query.get(image_id)
@@ -146,29 +96,86 @@ def annotate_image(image_id):
     return jsonify({'message': f"Annotation enregistrée : {etat}"}), 200
 
 
-# Route pour récupérer les stats globales
 @routes.route('/stats', methods=['GET'])
 def stats():
     total = Image.query.count()
     pleines = Image.query.filter_by(classification_auto='pleine').count()
     vides = Image.query.filter_by(classification_auto='vide').count()
+    non_annotees = Image.query.filter(Image.etat_annot == None).count()
+
     return jsonify({
         'total_images': total,
         'pleines': pleines,
         'vides': vides,
         'pleines_%': round(pleines / total * 100, 2) if total else 0,
-        'vides_%': round(vides / total * 100, 2) if total else 0
+        'vides_%': round(vides / total * 100, 2) if total else 0,
+        'non_annotees': non_annotees
     })
 
 
-# Route pour réentraîner le modèle
-@routes.route('/train', methods=['POST'])
-def entrainer():
-    os.system('python app/utils/train_model.py')
-    return jsonify({'message': 'Modèle réentraîné'}), 200
+@routes.route('/rules', methods=['GET'])
+def get_rules():
+    regles = RegleClassification.query.all()
+    return jsonify([{
+        'id': r.id,
+        'nom': r.nom_regle,
+        'condition': r.condition_rc,
+        'active': r.active
+    } for r in regles])
 
 
-# Route pour récupérer les image
+# === Ajouter une nouvelle règle ===
+@routes.route('/rules', methods=['POST'])
+def add_rule():
+    data = request.get_json()
+    nom = data.get('nom')
+    condition = data.get('condition')
+    description = data.get('description', "")
+    active = data.get('active', True)
+
+    if not nom or not condition:
+        return jsonify({'error': 'Champs nom et condition obligatoires'}), 400
+
+    rule = RegleClassification(
+        nom_regle=nom,
+        condition_rc=condition,
+        description_rc=description,
+        active=active
+    )
+    db.session.add(rule)
+    db.session.commit()
+    return jsonify({'message': 'Règle ajoutée', 'id': rule.id}), 201
+
+
+# === Modifier une règle ===
+@routes.route('/rules/<int:rule_id>', methods=['PUT'])
+def update_rule(rule_id):
+    rule = RegleClassification.query.get(rule_id)
+    if not rule:
+        return jsonify({'error': 'Règle non trouvée'}), 404
+
+    data = request.get_json()
+    rule.nom_regle = data.get('nom', rule.nom_regle)
+    rule.condition_rc = data.get('condition', rule.condition_rc)
+    rule.description_rc = data.get('description', rule.description_rc)
+    rule.active = data.get('active', rule.active)
+
+    db.session.commit()
+    return jsonify({'message': 'Règle mise à jour'})
+
+
+# === Supprimer une règle ===
+@routes.route('/rules/<int:rule_id>', methods=['DELETE'])
+def delete_rule(rule_id):
+    rule = RegleClassification.query.get(rule_id)
+    if not rule:
+        return jsonify({'error': 'Règle non trouvée'}), 404
+
+    db.session.delete(rule)
+    db.session.commit()
+    return jsonify({'message': 'Règle supprimée'})
+
+
 @routes.route('/images', methods=['GET'])
 def get_images():
     images = Image.query.all()
@@ -181,9 +188,130 @@ def get_images():
     return jsonify(result)
 
 
-# Route pour la page d'accueil
+@routes.route('/verify', methods=['GET'])
+def verify_data():
+    erreurs = []
+
+    # 1. Image sans fichier sur le disque
+    images = Image.query.all()
+    for img in images:
+        if not os.path.exists(img.chemin_stockage):
+            erreurs.append({
+                'type': 'missing_file',
+                'image_id': img.id,
+                'fichier': img.fichier_nom,
+                'message': 'Fichier manquant sur le disque'
+            })
+
+    # 2. Fichier sur disque mais pas en base
+    uploads_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'uploads'))
+    fichiers = [f for f in os.listdir(uploads_dir) if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
+    for f in fichiers:
+        if not Image.query.filter_by(fichier_nom=f).first():
+            erreurs.append({
+                'type': 'orphan_file',
+                'fichier': f,
+                'message': 'Fichier présent sur disque mais pas en base'
+            })
+
+    # 3. Image sans caractéristiques
+    ids_avec_caract = [c.id for c in CaracteristiquesImage.query.all()]
+    for img in images:
+        if img.id not in ids_avec_caract:
+            erreurs.append({
+                'type': 'missing_features',
+                'image_id': img.id,
+                'fichier': img.fichier_nom,
+                'message': 'Aucune caractéristique trouvée'
+            })
+
+    # 4. Image sans annotation ET sans classification
+    for img in images:
+        if not img.etat_annot and not img.classification_auto:
+            erreurs.append({
+                'type': 'unusable_image',
+                'image_id': img.id,
+                'fichier': img.fichier_nom,
+                'message': 'Image ni annotée ni classée'
+            })
+
+    # 5. Valeurs incohérentes
+    for c in CaracteristiquesImage.query.all():
+        if c.taille_ko < 1 or c.moyenne_rouge > 255 or c.moyenne_bleu > 255:
+            erreurs.append({
+                'type': 'invalid_features',
+                'image_id': c.id,
+                'message': 'Valeurs incohérentes détectées'
+            })
+
+    return jsonify({
+        'total_images': len(images),
+        'erreurs_detectees': len(erreurs),
+        'details': erreurs
+    })
+
+
+# ============================================================================
+CLE_AGENT = "AGENT2025"
+
+@routes.route('/register', methods=['POST'])
+def register():
+    data = request.get_json()
+    nom_utilisateur = data.get('nom_utilisateur')
+    email = data.get('email')
+    mot_de_passe = data.get('mot_de_passe')
+    role = data.get('role', 'citoyen')
+    access_key = data.get('access_key')
+
+    if not all([nom_utilisateur, email, mot_de_passe]):
+        return jsonify({'error': 'Champs requis manquants'}), 400
+
+    if role == 'admin':
+        return jsonify({'error': 'Création de compte admin interdite'}), 403
+
+    if role == 'agent' and access_key != CLE_AGENT:
+        return jsonify({'error': 'Clé d’accès invalide pour créer un agent'}), 403
+
+    if Utilisateur.query.filter_by(nom_utilisateur=nom_utilisateur).first():
+        return jsonify({'error': 'Nom utilisateur déjà utilisé'}), 409
+
+    hashed_password = bcrypt.generate_password_hash(mot_de_passe).decode('utf-8')
+
+    utilisateur = Utilisateur(
+        nom_utilisateur=nom_utilisateur,
+        email=email,
+        mot_de_passe=hashed_password,
+        role=role
+    )
+    db.session.add(utilisateur)
+    db.session.commit()
+
+    return jsonify({
+        'id': utilisateur.id,
+        'nom_utilisateur': utilisateur.nom_utilisateur,
+        'role': utilisateur.role
+    }), 201
+
+
+@routes.route('/login', methods=['POST'])
+def login():
+    data = request.get_json()
+    email = data.get('email')
+    mot_de_passe = data.get('mot_de_passe')
+
+    utilisateur = Utilisateur.query.filter_by(email=email).first()
+
+    if utilisateur and bcrypt.check_password_hash(utilisateur.mot_de_passe, mot_de_passe):
+        return jsonify({
+            'id': utilisateur.id,
+            'nom_utilisateur': utilisateur.nom_utilisateur,
+            'role': utilisateur.role
+        }), 200
+    else:
+        return jsonify({'error': 'Email ou mot de passe invalide'}), 401
+
+
 @routes.route('/')
 def home():
-    welcome = "<h1>VISIO</h1>" \
-              "<h2>Bienvenue sur l'API de la plateforme intelligente de suivi des poubelles</h2>"
-    return welcome
+    return "<h1>VISIO</h1>" \
+    "<h2>Bienvenue sur l'API de suivi intelligent des poubelles</h2>"

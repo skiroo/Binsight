@@ -1,31 +1,25 @@
-<script setup>
-</script>
-
 <template>
-  <header>
-    <h1>VISIO</h1>
-    <nav>
-      <router-link to="/upload">📤 Upload</router-link>
-      |
-      <router-link to="/carte">🗺️ Carte Dynamique</router-link>
-    </nav>
-  </header>
-
-  <main>
-    <router-view />
-  </main>
+    <div id="app">
+        <Navbar @open-login="showLogin = true" />
+        <LoginRegisterModal v-if="showLogin" @close="showLogin = false" />
+        <router-view />
+    </div>
 </template>
 
-<style scoped>
-header {
-  padding: 1rem;
-  background: #333;
-  color: white;
-  text-align: center;
-}
-nav a {
-  color: white;
-  text-decoration: none;
-  margin: 0 1rem;
-}
-</style>
+<script>
+    import Navbar from "@/components/Navbar.vue";
+    import LoginRegisterModal from "@/components/LoginRegisterModal.vue";
+
+    export default {
+        components: {
+            Navbar,
+            LoginRegisterModal,
+        },
+
+        data() {
+            return {
+                showLogin: false,
+            };
+        },
+    };
+</script>

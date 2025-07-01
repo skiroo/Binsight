@@ -1,18 +1,46 @@
-import { createRouter, createWebHistory } from 'vue-router'
-import UploadPage from './components/UploadPage.vue'
-import MapPage from './components/MapPage.vue'
-import ImageFromGitHub from './components/ImageFromGitHub.vue' // <- il manquait ça
+import { createRouter, createWebHistory } from 'vue-router';
+
+import Home from './pages/Home.vue';
+import Upload from './pages/Upload.vue';
+import Dashboard from './pages/Dashboard.vue';
+import Map from './pages/Map.vue';
+import About from './pages/About.vue';
 
 const routes = [
-  { path: '/github-image', component: ImageFromGitHub },
-  { path: '/upload', component: UploadPage },
-  { path: '/carte', component: MapPage },
-  { path: '/', redirect: '/upload' }
-]
+    {
+        path: '/',
+        name: 'Home',
+        component: Home
+    },
+
+    {
+        path: '/upload',
+        name: 'Upload',
+        component: Upload
+    },
+
+    {
+        path: '/dashboard',
+        name: 'Dashboard',
+        component: Dashboard
+    },
+
+    {
+        path: '/map',
+        name: 'Map',
+        component: Map
+    },
+
+    {
+        path: '/about',
+        name: 'About',
+        component: About
+    },
+];
 
 const router = createRouter({
-  history: createWebHistory(),
-  routes
-})
+    history: createWebHistory(),
+    routes,
+});
 
-export default router
+export default router;

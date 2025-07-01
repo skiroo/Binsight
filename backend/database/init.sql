@@ -74,3 +74,15 @@ CREATE TABLE IF NOT EXISTS statistiques (
     nb_pleines INTEGER,
     FOREIGN KEY (localisation_id) REFERENCES localisations(id)
 );
+
+CREATE TABLE IF NOT EXISTS localisation (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    image_id INTEGER NOT NULL FOREIGN KEY REFERENCES images(id),
+    longitude FLOAT NOT NULL,
+    latitude FLOAT NOT NULL,
+    numero_rue TEXT,
+    nom_rue TEXT NOT NULL,
+    ville TEXT NOT NULL,
+    code_postal TEXT NOT NULL,
+    pays TEXT NOT NULL,
+);
