@@ -15,7 +15,7 @@ def create_app():
     app.config.from_object('database.config.Config')
     app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024
 
-    CORS(app)
+    CORS(app, origins=["http://localhost:5173"])
 
     db.init_app(app)
     bcrypt.init_app(app)  # 🔐 initialisation ici

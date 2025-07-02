@@ -28,7 +28,7 @@
         methods: {
             async handleRegister() {
                 let role = 'citoyen';
-                const CLE_AGENT = 'AGENT2025'; // Clé définie par l'admin côté client
+                const CLE_AGENT = 'AGENT2025'; // Clé définie par l'admin
 
                 if (this.accessKey === CLE_AGENT) {
                     role = 'agent';

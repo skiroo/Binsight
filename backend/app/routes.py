@@ -252,64 +252,6 @@ def verify_data():
 
 
 # ============================================================================
-CLE_AGENT = "AGENT2025"
-
-@routes.route('/register', methods=['POST'])
-def register():
-    data = request.get_json()
-    nom_utilisateur = data.get('nom_utilisateur')
-    email = data.get('email')
-    mot_de_passe = data.get('mot_de_passe')
-    role = data.get('role', 'citoyen')
-    access_key = data.get('access_key')
-
-    if not all([nom_utilisateur, email, mot_de_passe]):
-        return jsonify({'error': 'Champs requis manquants'}), 400
-
-    if role == 'admin':
-        return jsonify({'error': 'Création de compte admin interdite'}), 403
-
-    if role == 'agent' and access_key != CLE_AGENT:
-        return jsonify({'error': 'Clé d’accès invalide pour créer un agent'}), 403
-
-    if Utilisateur.query.filter_by(nom_utilisateur=nom_utilisateur).first():
-        return jsonify({'error': 'Nom utilisateur déjà utilisé'}), 409
-
-    hashed_password = bcrypt.generate_password_hash(mot_de_passe).decode('utf-8')
-
-    utilisateur = Utilisateur(
-        nom_utilisateur=nom_utilisateur,
-        email=email,
-        mot_de_passe=hashed_password,
-        role=role
-    )
-    db.session.add(utilisateur)
-    db.session.commit()
-
-    return jsonify({
-        'id': utilisateur.id,
-        'nom_utilisateur': utilisateur.nom_utilisateur,
-        'role': utilisateur.role
-    }), 201
-
-
-@routes.route('/login', methods=['POST'])
-def login():
-    data = request.get_json()
-    email = data.get('email')
-    mot_de_passe = data.get('mot_de_passe')
-
-    utilisateur = Utilisateur.query.filter_by(email=email).first()
-
-    if utilisateur and bcrypt.check_password_hash(utilisateur.mot_de_passe, mot_de_passe):
-        return jsonify({
-            'id': utilisateur.id,
-            'nom_utilisateur': utilisateur.nom_utilisateur,
-            'role': utilisateur.role
-        }), 200
-    else:
-        return jsonify({'error': 'Email ou mot de passe invalide'}), 401
-
 
 @routes.route('/')
 def home():

@@ -8,7 +8,7 @@ def extraire_caracteristiques(image_path):
     with PILImage.open(image_path) as img:
         img = img.convert('RGB')
         np_img = np.array(img)
-        hauteur, largeur = img.shape[:2]
+        largeur, hauteur = img.size
         taille_ko = round(os.path.getsize(image_path) / 1024, 2)
 
         # Moyenne RGB
