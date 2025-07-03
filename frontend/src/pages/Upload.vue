@@ -230,35 +230,127 @@ export default {
 .upload-container {
   max-width: 600px;
   margin: auto;
-  padding: 20px;
+  padding: 20px 15px;
+  font-size: 0.95rem;
 }
-.preview {
-  max-width: 100%;
-  margin-top: 10px;
-}
-.success-msg {
-  margin-top: 15px;
-  color: green;
-  font-weight: bold;
+
+h2, h3 {
+  margin-bottom: 12px;
+  font-size: 1.4rem;
   text-align: center;
 }
+
+input[type="file"],
+input,
+button {
+  font-family: inherit;
+  font-size: 0.95rem;
+}
+
+input[type="file"] {
+  margin-bottom: 12px;
+}
+
+input {
+  width: 100%;
+  padding: 8px;
+  margin: 5px 0;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+}
+
+.preview {
+  display: block;
+  max-width: 100%;
+  max-height: 220px;
+  margin: 10px auto;
+  border-radius: 6px;
+  object-fit: contain;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.15);
+}
+
+.success-msg {
+  margin-top: 10px;
+  color: #10b981;
+  font-weight: 600;
+  text-align: center;
+}
+
+button {
+  background-color: #10b981;
+  color: white;
+  padding: 6px 12px; /* ⬅️ réduit la taille */
+  font-size: 0.9rem;  /* ⬅️ texte plus petit */
+  border-radius: 5px;
+  font-weight: 600;
+  border: none;
+  margin: 8px auto;
+  display: block;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  max-width: 180px; /* optionnel : limite la largeur */
+}
+
+button:hover {
+  background-color: #059669;
+}
+
+.loader {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #10b981;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  animation: spin 0.8s linear infinite;
+  margin: 15px auto;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 .fade-enter-active, .fade-leave-active {
-  transition: opacity 0.5s;
+  transition: opacity 0.4s;
 }
 .fade-enter-from, .fade-leave-to {
   opacity: 0;
 }
-.loader {
-  border: 5px solid #f3f3f3;
-  border-top: 5px solid #3498db;
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  animation: spin 1s linear infinite;
-  margin: 10px auto;
+
+#map {
+  height: 240px;
+  margin: 10px 0;
+  border-radius: 8px;
+  overflow: hidden;
 }
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+
+p {
+  text-align: center;
+  margin-top: 8px;
+  line-height: 1.3;
+}
+
+/* Mode sombre */
+.dark-theme .upload-container {
+  color: #f3f3f3;
+}
+
+.dark-theme input {
+  background-color: #1f2937;
+  border: 1px solid #374151;
+  color: #f3f3f3;
+}
+
+.dark-theme button {
+  background-color: #10b981;
+  color: #fff;
+}
+
+.dark-theme button:hover {
+  background-color: #059669;
+}
+
+.dark-theme #map {
+  filter: brightness(0.85);
 }
 </style>
