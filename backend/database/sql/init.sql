@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS images (
     date_upload TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     utilisateur_id INTEGER NOT NULL,
     source TEXT CHECK (source IN ('citoyen', 'agent', 'caméra')),
-    etat_annot TEXT CHECK (etat_annot IN ('pleine', 'vide')),
+    etat_annot TEXT CHECK (etat_annot IN ('dirty', 'clean')),
     classification_auto TEXT,
     localisation_id INTEGER NOT NULL,
     FOREIGN KEY (utilisateur_id) REFERENCES utilisateurs(id),

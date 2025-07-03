@@ -27,8 +27,8 @@
 
       <div v-if="!annotationSent">
         <p>Annoter manuellement :</p>
-        <button @click="annotate('pleine')">Pleine</button>
-        <button @click="annotate('vide')">Vide</button>
+        <button @click="annotate('dirty')">Pleine</button>
+        <button @click="annotate('clean')">Vide</button>
       </div>
       <p v-if="annotationMsg">{{ annotationMsg }}</p>
     </div>

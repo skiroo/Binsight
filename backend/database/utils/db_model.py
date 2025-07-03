@@ -24,7 +24,7 @@ class Image(db.Model):
     utilisateur_id = db.Column(db.Integer, db.ForeignKey('utilisateurs.id', ondelete="CASCADE"), nullable=False)
     source = db.Column(db.Text)  # citoyen / agent / caméra
     etat_annot = db.Column(db.Text)  # annotation manuelle : pleine / vide
-    classification_auto = db.Column(db.Text)  # pleine / vide
+    classification_auto = db.Column(db.Text)  # dirty / clean
 
     utilisateur = db.relationship('Utilisateur', backref=db.backref('images', lazy=True))
 

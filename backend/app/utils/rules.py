@@ -31,7 +31,7 @@ def appliquer_regles_sur_image(image_id):
             if eval(regle.condition_rc, {}, variables):
                 # 5. Si la condition est vraie, on applique le label (via nom de la règle)
                 image = Image.query.get(image_id)
-                image.classification_auto = regle.nom_regle.lower()  # Ex: "pleine"
+                image.classification_auto = regle.nom_regle.lower()  # Ex: "dirty"
                 db.session.commit()
                 return regle.nom_regle.lower(), f"Classification : {regle.nom_regle}"
         except Exception as e:

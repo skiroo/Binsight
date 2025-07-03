@@ -68,7 +68,7 @@ def upload_image():
         # Mise à jour dans la table Image
         img_obj = Image.query.get(image_id)
         if img_obj:
-            img_obj.etat_annot = annotation if annotation in ['pleine', 'vide'] else None
+            img_obj.etat_annot = annotation if annotation in ['dirty', 'clean'] else None
             db.session.commit()
 
             # Création de la localisation
@@ -109,7 +109,7 @@ def update_image(image_id):
     etat = data.get('etat')
     loc = data.get('localisation')
 
-    if etat in ['pleine', 'vide']:
+    if etat in ['dirty', 'clean']:
         image.etat_annot = etat
         db.session.commit()
 
@@ -163,7 +163,7 @@ def annotate_image(image_id):
 
     data = request.get_json()
     etat = data.get('etat')
-    if etat not in ['pleine', 'vide']:
+    if etat not in ['dirty', 'clean']:
         return jsonify({'error': 'Valeur d’annotation invalide'}), 400
 
     image.etat_annot = etat
@@ -174,8 +174,8 @@ def annotate_image(image_id):
 @routes.route('/stats', methods=['GET'])
 def stats():
     total = Image.query.count()
-    pleines = Image.query.filter_by(classification_auto='pleine').count()
-    vides = Image.query.filter_by(classification_auto='vide').count()
+    pleines = Image.query.filter_by(classification_auto='dirty').count()
+    vides = Image.query.filter_by(classification_auto='clean').count()
     non_annotees = Image.query.filter(Image.etat_annot == None).count()
 
     return jsonify({

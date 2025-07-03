@@ -5,20 +5,26 @@
     <!-- Upload image -->
     <input type="file" @change="handleImageUpload" accept="image/*" />
 
+    <!-- Loader pendant le traitement -->
+    <div v-if="loading">
+      <p>Classification automatique en cours...</p>
+      <div class="loader"></div>
+    </div>
+
     <!-- Aperçu image -->
-    <div v-if="imagePreview">
+    <div v-if="imagePreview && !loading">
       <img :src="imagePreview" alt="Aperçu" class="preview" />
     </div>
 
     <!-- Affichage annotation actuelle -->
-    <div v-if="etat">
-      <p><strong>État :</strong> {{ etat === 'pleine' ? 'Dirty' : 'Clean' }}</p>
+    <div v-if="etat && !loading">
+      <p><strong>État :</strong> {{ etat === 'dirty' ? 'Pleine' : etat === 'clean' ? 'Vide' : 'Non défini' }}</p>
     </div>
 
     <!-- Choix manuel -->
-    <div v-if="imageId">
-      <label><input type="radio" value="pleine" v-model="etatAnnot" /> Dirty</label>
-      <label><input type="radio" value="vide" v-model="etatAnnot" /> Clean</label>
+    <div v-if="imageId && !loading">
+      <label><input type="radio" value="dirty" v-model="etatAnnot" /> Pleine</label>
+      <label><input type="radio" value="clean" v-model="etatAnnot" /> Vide</label>
     </div>
 
     <!-- Localisation -->
@@ -33,7 +39,7 @@
     <p>Latitude : {{ localisation.lat }}, Longitude : {{ localisation.lon }}</p>
 
     <!-- Bouton de validation -->
-    <button @click="submit">Valider</button>
+    <button @click="submit" :disabled="loading || !image">Valider</button>
 
     <transition name="fade">
       <p v-if="message" class="success-msg">{{ message }}</p>
@@ -54,6 +60,7 @@ export default {
       etat: '',
       etatAnnot: '',
       message: '',
+      loading: false,
       localisation: {
         rue_num: '',
         rue_nom: '',
@@ -76,8 +83,12 @@ export default {
       const file = e.target.files[0];
       if (!file) return;
 
+      this.loading = true;
       this.image = file;
       this.imagePreview = URL.createObjectURL(file);
+      this.imageId = null;
+      this.etat = '';
+      this.etatAnnot = '';
 
       const formData = new FormData();
       formData.append('image', file);
@@ -96,6 +107,9 @@ export default {
         .catch(err => {
           console.error('Erreur classification :', err);
           this.message = "Erreur lors de la classification.";
+        })
+        .finally(() => {
+          this.loading = false;
         });
     },
     submit() {
@@ -115,6 +129,22 @@ export default {
         .then(data => {
           this.message = data.message || 'Annotation mise à jour';
           setTimeout(() => this.message = '', 4000);
+
+          // Réinitialiser les champs
+          this.image = null;
+          this.imageId = null;
+          this.imagePreview = null;
+          this.etat = '';
+          this.etatAnnot = '';
+          this.localisation = {
+            rue_num: '',
+            rue_nom: '',
+            cp: '',
+            ville: '',
+            pays: '',
+            lat: '',
+            lon: ''
+          };
         })
         .catch(err => {
           console.error('Erreur :', err);
@@ -167,5 +197,18 @@ export default {
 }
 .fade-enter-from, .fade-leave-to {
   opacity: 0;
+}
+.loader {
+  border: 5px solid #f3f3f3;
+  border-top: 5px solid #3498db;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+  margin: 10px auto;
+}
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 </style>
