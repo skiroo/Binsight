@@ -1,22 +1,5 @@
 from database.utils.db_model import db, CaracteristiquesImage, RegleClassification, Image
 
-# from app.app import create_app
-# from database.db_models import db, RegleClassification
-
-# app = create_app()
-
-# with app.app_context():
-#     regle = RegleClassification(
-#         nom_regle="pleine",
-#         description_rc="Image sombre et fichier lourd → poubelle probablement pleine",
-#         condition_rc="moyenne_rouge < 110 and moyenne_vert < 120 and moyenne_bleu < 130 and taille_ko > 150",
-#         active=True
-#     )
-#     db.session.add(regle)
-#     db.session.commit()
-#     print("✅ Règle 'pleine' ajoutée.")
-
-
 def appliquer_regles_sur_image(image_id):
     # 1. Récupérer les caractéristiques de l’image
     caracteristiques = CaracteristiquesImage.query.get(image_id)

@@ -6,7 +6,7 @@ import os
 
 from app.utils.rules import appliquer_regles_sur_image
 from app.extensions import bcrypt
-from database.utils.db_model import db, Image, RegleClassification, CaracteristiquesImage, Utilisateur
+from database.utils.db_model import db, Image, RegleClassification, CaracteristiquesImage, Utilisateur, Localisation
 from database.utils.db_insert import traiter_image
 
 routes = Blueprint('routes', __name__)
@@ -28,7 +28,6 @@ def upload_image():
     if file.filename == '' or not allowed_file(file.filename):
         return jsonify({'error': 'Fichier invalide'}), 400
 
-    # Nom de fichier sans extension
     original_filename = secure_filename(file.filename)
     basename = os.path.splitext(original_filename)[0]
     filename = basename + ".webp"
@@ -36,11 +35,12 @@ def upload_image():
     save_path = os.path.join(UPLOAD_FOLDER, filename)
 
     try:
-        # Compression + conversion WebP (Green IT)
+        # Compression et conversion
         img = PILImage.open(file.stream).convert("RGB")
-        img.thumbnail((1024, 1024))  # Redimensionnement max
+        img.thumbnail((1024, 1024))  # Redimensionnement
         img.save(save_path, format='WEBP', quality=80, method=6)
 
+        # Classification
         mode = request.form.get('mode_classification', 'auto')
         if mode == 'manuel':
             image_id, label, msg = traiter_image(save_path)
@@ -55,6 +55,36 @@ def upload_image():
             image_id, label, msg = traiter_image(save_path)
             label, msg = None, f"Mode de classification inconnu : {mode}"
 
+        # Récupération des données supplémentaires
+        annotation = request.form.get('annotation')
+        rue_nom = request.form.get('rue_nom')
+        rue_num = request.form.get('rue_num')
+        cp = request.form.get('cp')
+        ville = request.form.get('ville')
+        pays = request.form.get('pays')
+        lat = request.form.get('lat')
+        lon = request.form.get('lon')
+
+        # Mise à jour dans la table Image
+        img_obj = Image.query.get(image_id)
+        if img_obj:
+            img_obj.etat_annot = annotation if annotation in ['pleine', 'vide'] else None
+            db.session.commit()
+
+            # Création de la localisation
+            localisation = Localisation(
+                image_id=image_id,
+                nom_rue=rue_nom,
+                numero_rue=rue_num,
+                code_postal=cp,
+                ville=ville,
+                pays=pays,
+                latitude=float(lat) if lat else None,
+                longitude=float(lon) if lon else None
+            )
+            db.session.add(localisation)
+            db.session.commit()
+
         return jsonify({
             'message': msg,
             'image_id': image_id,
@@ -64,6 +94,37 @@ def upload_image():
     finally:
         if os.path.exists(save_path):
             os.remove(save_path)
+
+
+@routes.route('/update/<int:image_id>', methods=['POST'])
+def update_image(image_id):
+    image = Image.query.get(image_id)
+    if not image:
+        return jsonify({'error': 'Image introuvable'}), 404
+
+    data = request.get_json()
+    etat = data.get('etat')
+    loc = data.get('localisation', {})
+
+    if etat in ['pleine', 'vide']:
+        image.etat_annot = etat
+        db.session.commit()
+
+    # Localisation
+    localisation = Localisation(
+        image_id=image.id,
+        nom_rue=loc.get('rue_nom'),
+        numero_rue=loc.get('rue_num'),
+        code_postal=loc.get('cp'),
+        ville=loc.get('ville'),
+        pays=loc.get('pays'),
+        latitude=float(loc.get('lat')) if loc.get('lat') else None,
+        longitude=float(loc.get('lon')) if loc.get('lon') else None
+    )
+    db.session.add(localisation)
+    db.session.commit()
+
+    return jsonify({'message': 'Image mise à jour avec succès'})
 
 
 @routes.route('/classify/<int:image_id>', methods=['POST'])
