@@ -1,7 +1,7 @@
 <template>
   <div id="app">
     <Navbar @open-login="showLogin = true" @toggle-theme="toggleDark" :is-dark="darkMode" />
-    <LoginRegisterModal v-if="showLogin" @close="showLogin = false" />
+    <LoginRegisterModal v-if="showLogin" @close="showLogin = false" :is-dark="darkMode" />
     <router-view />
     <Footer />
   </div>
@@ -84,3 +84,4 @@ html, body {
   background-color: #059669;
 }
 </style>
+
