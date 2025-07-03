@@ -4,9 +4,9 @@ from dotenv import load_dotenv
 import os
 
 from database.utils.db_model import db
-from app.extensions import bcrypt  # 🔁 on importe ici maintenant
+from app.extensions import bcrypt
 from app.routes import routes
-from app.auth_routes import auth_routes  # si tu l’utilises
+from app.auth_routes import auth_routes
 
 def create_app():
     load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', 'database', '.env'))
@@ -18,7 +18,7 @@ def create_app():
     CORS(app, origins=["http://localhost:5173"])
 
     db.init_app(app)
-    bcrypt.init_app(app)  # 🔐 initialisation ici
+    bcrypt.init_app(app)
 
     app.register_blueprint(routes)
     app.register_blueprint(auth_routes)

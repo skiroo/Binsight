@@ -10,7 +10,7 @@
           {{ currentForm === 'LoginForm' ? "Pas encore inscrit ?" : "Déjà un compte ?" }}
         </span>
         <button @click="toggleMode">
-          {{ currentForm === 'LoginForm' ? "S’enregistrer" : "Se connecter" }}
+          {{ currentForm === 'LoginForm' ? "S’inscrire" : "Se connecter" }}
         </button>
       </div>
     </div>

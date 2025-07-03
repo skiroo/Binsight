@@ -37,7 +37,12 @@
     <!-- Localisation -->
     <h3>Localisation</h3>
     <input v-model="localisation.rue_num" placeholder="Numéro de rue" />
-    <input v-model="localisation.rue_nom" placeholder="Nom de rue" />
+    <input v-model="localisation.rue_nom" placeholder="Nom de rue" @input="fetchAddressSuggestions" />
+    <ul v-if="suggestions.length" class="suggestions">
+      <li v-for="(sug, index) in suggestions" :key="index" @click="applySuggestion(sug)">
+        {{ sug.label }}
+      </li>
+    </ul>
     <input v-model="localisation.cp" placeholder="Code postal" />
     <input v-model="localisation.ville" placeholder="Ville" />
     <input v-model="localisation.pays" placeholder="Pays" />
@@ -69,6 +74,7 @@ export default {
       message: '',
       loading: false,
       cameraActive: false,
+      suggestions: [],
       localisation: {
         rue_num: '',
         rue_nom: '',
@@ -162,6 +168,35 @@ export default {
         this.stopCamera();
       }, "image/jpeg");
     },
+    fetchAddressSuggestions() {
+      if (this.localisation.rue_nom.length < 3) {
+        this.suggestions = [];
+        return;
+      }
+      fetch(`https://api-adresse.data.gouv.fr/search/?q=${this.localisation.rue_nom}`)
+        .then(res => res.json())
+        .then(data => {
+          this.suggestions = data.features.map(f => ({
+            label: f.properties.label,
+            city: f.properties.city,
+            postcode: f.properties.postcode,
+            name: f.properties.name,
+            number: f.properties.housenumber,
+            lat: f.geometry.coordinates[1],
+            lon: f.geometry.coordinates[0]
+          }));
+        });
+    },
+    applySuggestion(sug) {
+      this.localisation.rue_nom = sug.name;
+      this.localisation.rue_num = sug.number || '';
+      this.localisation.ville = sug.city;
+      this.localisation.cp = sug.postcode;
+      this.localisation.lat = sug.lat;
+      this.localisation.lon = sug.lon;
+      this.localisation.pays = 'France';
+      this.suggestions = [];
+    },
     submit() {
       if (!this.imageId || !this.etatAnnot) return;
 
@@ -180,7 +215,6 @@ export default {
           this.message = data.message || 'Annotation mise à jour';
           setTimeout(() => this.message = '', 4000);
 
-          // Réinitialiser les champs
           this.image = null;
           this.imageId = null;
           this.imagePreview = null;
@@ -195,6 +229,7 @@ export default {
             lat: '',
             lon: ''
           };
+          this.suggestions = [];
         })
         .catch(err => {
           console.error('Erreur :', err);
@@ -352,5 +387,23 @@ p {
 
 .dark-theme #map {
   filter: brightness(0.85);
+}
+
+/* css pour suggestion adresse */
+.suggestions {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  border: 1px solid #ccc;
+  background: white;
+  max-height: 150px;
+  overflow-y: auto;
+}
+.suggestions li {
+  padding: 8px;
+  cursor: pointer;
+}
+.suggestions li:hover {
+  background-color: #f0f0f0;
 }
 </style>
