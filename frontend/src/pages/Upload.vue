@@ -2,8 +2,15 @@
   <div class="upload-container">
     <h2>Téléversement d'une image</h2>
 
-    <!-- Upload image -->
+    <!-- Upload image ou prise de photo -->
     <input type="file" @change="handleImageUpload" accept="image/*" />
+    <button @click="startCamera">Prendre une photo</button>
+    <video ref="video" autoplay playsinline style="display:none; width: 100%; margin-top: 10px;"></video>
+    <div v-if="cameraActive">
+      <button @click="capturePhoto">Capturer</button>
+      <button @click="stopCamera">Fermer la caméra</button>
+    </div>
+    <canvas ref="canvas" style="display:none;"></canvas>
 
     <!-- Loader pendant le traitement -->
     <div v-if="loading">
@@ -61,6 +68,7 @@ export default {
       etatAnnot: '',
       message: '',
       loading: false,
+      cameraActive: false,
       localisation: {
         rue_num: '',
         rue_nom: '',
@@ -82,7 +90,9 @@ export default {
     handleImageUpload(e) {
       const file = e.target.files[0];
       if (!file) return;
-
+      this.processImage(file);
+    },
+    processImage(file) {
       this.loading = true;
       this.image = file;
       this.imagePreview = URL.createObjectURL(file);
@@ -111,6 +121,46 @@ export default {
         .finally(() => {
           this.loading = false;
         });
+    },
+    startCamera() {
+      this.cameraActive = true;
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => {
+          this.$refs.video.srcObject = stream;
+          this.$refs.video.style.display = 'block';
+        })
+        .catch(err => {
+          console.error("Erreur caméra :", err);
+        });
+    },
+    stopCamera() {
+      const stream = this.$refs.video.srcObject;
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        this.$refs.video.srcObject = null;
+        this.cameraActive = false;
+        this.$refs.video.style.display = 'none';
+      }
+    },
+    capturePhoto() {
+      const video = this.$refs.video;
+      const canvas = this.$refs.canvas;
+      const context = canvas.getContext("2d");
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      context.drawImage(video, 0, 0);
+
+      canvas.toBlob(blob => {
+        navigator.geolocation.getCurrentPosition(position => {
+          this.localisation.lat = position.coords.latitude;
+          this.localisation.lon = position.coords.longitude;
+
+          const file = new File([blob], "captured.jpg", { type: "image/jpeg" });
+          this.processImage(file);
+        });
+
+        this.stopCamera();
+      }, "image/jpeg");
     },
     submit() {
       if (!this.imageId || !this.etatAnnot) return;
