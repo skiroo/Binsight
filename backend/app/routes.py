@@ -103,26 +103,40 @@ def update_image(image_id):
         return jsonify({'error': 'Image introuvable'}), 404
 
     data = request.get_json()
+    if not data:
+        return jsonify({'error': 'Aucune donnée reçue'}), 400
+
     etat = data.get('etat')
-    loc = data.get('localisation', {})
+    loc = data.get('localisation')
 
     if etat in ['pleine', 'vide']:
         image.etat_annot = etat
         db.session.commit()
 
-    # Localisation
-    localisation = Localisation(
-        image_id=image.id,
-        nom_rue=loc.get('rue_nom'),
-        numero_rue=loc.get('rue_num'),
-        code_postal=loc.get('cp'),
-        ville=loc.get('ville'),
-        pays=loc.get('pays'),
-        latitude=float(loc.get('lat')) if loc.get('lat') else None,
-        longitude=float(loc.get('lon')) if loc.get('lon') else None
-    )
-    db.session.add(localisation)
-    db.session.commit()
+    if loc:
+        localisation = Localisation.query.filter_by(image_id=image.id).first()
+        if localisation:
+            localisation.nom_rue = loc.get('rue_nom')
+            localisation.numero_rue = loc.get('rue_num')
+            localisation.code_postal = loc.get('cp')
+            localisation.ville = loc.get('ville')
+            localisation.pays = loc.get('pays')
+            localisation.latitude = float(loc.get('lat')) if loc.get('lat') else None
+            localisation.longitude = float(loc.get('lon')) if loc.get('lon') else None
+        else:
+            localisation = Localisation(
+                image_id=image.id,
+                nom_rue=loc.get('rue_nom'),
+                numero_rue=loc.get('rue_num'),
+                code_postal=loc.get('cp'),
+                ville=loc.get('ville'),
+                pays=loc.get('pays'),
+                latitude=float(loc.get('lat')) if loc.get('lat') else None,
+                longitude=float(loc.get('lon')) if loc.get('lon') else None
+            )
+            db.session.add(localisation)
+
+        db.session.commit()
 
     return jsonify({'message': 'Image mise à jour avec succès'})
 

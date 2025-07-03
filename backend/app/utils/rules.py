@@ -15,6 +15,9 @@ def appliquer_regles_sur_image(image_id):
         'moyenne_vert': caracteristiques.moyenne_vert,
         'moyenne_bleu': caracteristiques.moyenne_bleu,
         'contraste': caracteristiques.contraste or 0,
+        'luminance_moyenne': caracteristiques.luminance_moyenne or 0,
+        'dark_pixel_ratio': caracteristiques.dark_pixel_ratio or 0,
+        'texture_score': caracteristiques.texture_score or 0,
     }
 
     # 3. Charger les règles actives
