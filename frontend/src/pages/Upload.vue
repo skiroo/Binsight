@@ -35,17 +35,13 @@
     </div>
 
     <!-- Localisation -->
-    <h3>Localisation</h3>
-    <input v-model="localisation.rue_num" placeholder="Numéro de rue" />
-    <input v-model="localisation.rue_nom" placeholder="Nom de rue" @input="fetchAddressSuggestions" />
+    <h3>Adresse</h3>
+    <input v-model="adresseComplete" placeholder="Ex : 15 rue de Paris, 75000 Paris" @input="fetchAddressSuggestions" />
     <ul v-if="suggestions.length" class="suggestions">
       <li v-for="(sug, index) in suggestions" :key="index" @click="applySuggestion(sug)">
         {{ sug.label }}
       </li>
     </ul>
-    <input v-model="localisation.cp" placeholder="Code postal" />
-    <input v-model="localisation.ville" placeholder="Ville" />
-    <input v-model="localisation.pays" placeholder="Pays" />
 
     <div id="map" style="height: 300px; margin-top: 10px;"></div>
     <p>Latitude : {{ localisation.lat }}, Longitude : {{ localisation.lon }}</p>
@@ -74,6 +70,7 @@ export default {
       message: '',
       loading: false,
       cameraActive: false,
+      adresseComplete: '',
       suggestions: [],
       localisation: {
         rue_num: '',
@@ -169,11 +166,11 @@ export default {
       }, "image/jpeg");
     },
     fetchAddressSuggestions() {
-      if (this.localisation.rue_nom.length < 3) {
+      if (this.adresseComplete.length < 3) {
         this.suggestions = [];
         return;
       }
-      fetch(`https://api-adresse.data.gouv.fr/search/?q=${this.localisation.rue_nom}`)
+      fetch(`https://api-adresse.data.gouv.fr/search/?q=${this.adresseComplete}`)
         .then(res => res.json())
         .then(data => {
           this.suggestions = data.features.map(f => ({
@@ -195,7 +192,12 @@ export default {
       this.localisation.lat = sug.lat;
       this.localisation.lon = sug.lon;
       this.localisation.pays = 'France';
+      this.adresseComplete = sug.label;
       this.suggestions = [];
+
+      if (this.marker) this.map.removeLayer(this.marker);
+      this.marker = L.marker([sug.lat, sug.lon]).addTo(this.map);
+      this.map.setView([sug.lat, sug.lon], 17);
     },
     submit() {
       if (!this.imageId || !this.etatAnnot) return;
@@ -220,6 +222,7 @@ export default {
           this.imagePreview = null;
           this.etat = '';
           this.etatAnnot = '';
+          this.adresseComplete = '';
           this.localisation = {
             rue_num: '',
             rue_nom: '',
