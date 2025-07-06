@@ -141,6 +141,20 @@ def update_image(image_id):
     return jsonify({'message': 'Image mise à jour avec succès'})
 
 
+@routes.route('/delete_temp/<int:image_id>', methods=['DELETE'])
+def delete_temp(image_id):
+    img = Image.query.get(image_id)
+    if img:
+        db.session.delete(img)
+        db.session.commit()
+        try:
+            os.remove(img.chemin_stockage)
+        except Exception as e:
+            print("Erreur suppression fichier :", e)
+        return jsonify({'message': 'Image supprimée'}), 200
+    return jsonify({'message': 'Image non trouvée'}), 404
+
+
 @routes.route('/classify/<int:image_id>', methods=['POST'])
 def classify_image(image_id):
     label, message = appliquer_regles_sur_image(image_id)

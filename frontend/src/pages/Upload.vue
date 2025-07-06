@@ -96,6 +96,12 @@ export default {
       this.processImage(file);
     },
     processImage(file) {
+        if (this.imageId) {
+            fetch(`http://localhost:5000/delete_temp/${this.imageId}`, {
+                method: 'DELETE'
+            });
+        }
+
       this.loading = true;
       this.image = file;
       this.imagePreview = URL.createObjectURL(file);
