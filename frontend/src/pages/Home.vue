@@ -7,21 +7,21 @@
         Ensemble, luttons contre les dépôts sauvages grâce à la technologie.
       </p>
       <router-link to="/upload" class="btn-primary">
-        📤 Déposer une image
+         Déposer une image
       </router-link>
     </section>
 
     <section class="features">
       <div class="card feature-card">
-        <h3>📍 <strong>Géolocalisation</strong></h3>
+        <h3> <strong>Géolocalisation</strong></h3>
         <p>Identifiez et suivez les lieux de dépôts sauvages.</p>
       </div>
       <div class="card feature-card">
-        <h3>🤖 <strong>IA & Reconnaissance</strong></h3>
+        <h3> <strong>IA & Reconnaissance</strong></h3>
         <p>Analyse intelligente des images envoyées.</p>
       </div>
       <div class="card feature-card">
-        <h3>📊 <strong>Tableau de bord</strong></h3>
+        <h3> <strong>Tableau de bord</strong></h3>
         <p>Visualisation claire et intuitive des données.</p>
       </div>
     </section>
@@ -72,7 +72,7 @@
 }
 
 .feature-card {
-  background-color: #f8f9fa;
+  background-color: #e5e7eb;
   padding: 25px;
   border-radius: 15px;
   width: 250px;

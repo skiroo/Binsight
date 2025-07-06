@@ -1,8 +1,13 @@
 <template>
-  <div id="app">
+  <div class="app-container">
     <Navbar @open-login="showLogin = true" @toggle-theme="toggleDark" :is-dark="darkMode" />
+
     <LoginRegisterModal v-if="showLogin" @close="showLogin = false" :is-dark="darkMode" />
-    <router-view />
+
+    <main class="flex-grow">
+      <router-view />
+    </main>
+
     <Footer />
   </div>
 </template>
@@ -15,8 +20,8 @@ import LoginRegisterModal from "@/components/LoginRegisterModal.vue";
 export default {
   components: {
     Navbar,
-    LoginRegisterModal,
     Footer,
+    LoginRegisterModal,
   },
   data() {
     return {
@@ -31,32 +36,45 @@ export default {
   },
   watch: {
     darkMode(newVal) {
-      document.documentElement.classList.toggle('dark-theme', newVal);
-      document.documentElement.classList.toggle('light-theme', !newVal);
-    }
+      document.documentElement.classList.toggle("dark-theme", newVal);
+      document.documentElement.classList.toggle("light-theme", !newVal);
+    },
   },
   mounted() {
-    document.documentElement.classList.add('light-theme'); // Thème par défaut
-  }
+    document.documentElement.classList.add("light-theme"); // Thème par défaut
+  },
 };
 </script>
 
 <style>
-/* Base */
-html, body {
+/* STRUCTURE FLEX POUR PIED DE PAGE FIXÉ */
+.app-container {
+  display: flex;
+  flex-direction: column;
   min-height: 100vh;
+}
+
+main {
+  flex-grow: 1;
+}
+
+/* BASE GLOBALE */
+html,
+body {
   margin: 0;
   padding: 0;
+  min-height: 100vh;
+  font-family: 'Inter', sans-serif;
   transition: background-color 0.3s, color 0.3s;
 }
 
-/* Thème clair */
+/* THÈME CLAIR */
 .light-theme {
   background-color: #ffffff;
   color: #1a1a1a;
 }
 
-/* Thème sombre */
+/* THÈME SOMBRE */
 .dark-theme {
   background-color: #0e1117;
   color: #f1f1f1;
@@ -84,4 +102,3 @@ html, body {
   background-color: #059669;
 }
 </style>
-
