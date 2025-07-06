@@ -1,3 +1,19 @@
 {
-    "sqltools.connections": []
+    "sqltools.connections": [
+        {
+            "pgOptions": {
+                "ssl": {
+                    "rejectUnauthorized": true
+                }
+            },
+            "previewLimit": 50,
+            "server": "dpg-d1i4bundiees738toq1g-a.frankfurt-postgres.render.com",
+            "port": 5432,
+            "driver": "PostgreSQL",
+            "name": "VISIO_db",
+            "database": "poubelle_db_pd0z",
+            "username": "poubelle_db_pd0z_user",
+            "password": "phy1gGsk1Wgrhx0TtbZOlJGnUVORGXVT"
+        }
+    ]
 }
