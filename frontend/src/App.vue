@@ -1,53 +1,63 @@
 <template>
-  <div class="app-container">
-    <Navbar @open-login="showLogin = true" @toggle-theme="toggleDark" :is-dark="darkMode" />
+  <div class="app-container" :class="isDark ? 'dark-theme' : 'light-theme'">
+    <Navbar
+      :isDark="isDark"
+      :user="connectedUser"
+      @toggle-theme="toggleTheme"
+      @open-login="showModal = true"
+    />
 
-    <LoginRegisterModal v-if="showLogin" @close="showLogin = false" :is-dark="darkMode" />
+    <LoginRegisterModal
+      v-if="showModal"
+      :isDark="isDark"
+      @close="showModal = false"
+      @user-connected="handleUserConnected"
+    />
 
     <main class="flex-grow">
-      <router-view />
+      <RouterView />
     </main>
 
     <Footer />
   </div>
 </template>
 
-<script>
-import Navbar from "@/components/Navbar.vue";
-import Footer from "@/components/Footer.vue";
-import LoginRegisterModal from "@/components/LoginRegisterModal.vue";
+<script setup>
+import { ref, onMounted, watch } from 'vue';
+import Navbar from './components/Navbar.vue';
+import Footer from './components/Footer.vue';
+import LoginRegisterModal from './components/LoginRegisterModal.vue';
 
-export default {
-  components: {
-    Navbar,
-    Footer,
-    LoginRegisterModal,
-  },
-  data() {
-    return {
-      showLogin: false,
-      darkMode: false,
-    };
-  },
-  methods: {
-    toggleDark() {
-      this.darkMode = !this.darkMode;
-    },
-  },
-  watch: {
-    darkMode(newVal) {
-      document.documentElement.classList.toggle("dark-theme", newVal);
-      document.documentElement.classList.toggle("light-theme", !newVal);
-    },
-  },
-  mounted() {
-    document.documentElement.classList.add("light-theme"); // Thème par défaut
-  },
-};
+const isDark = ref(false);
+const showModal = ref(false);
+const connectedUser = ref(null);
+
+// Synchroniser le thème avec <html>
+watch(isDark, (newVal) => {
+  document.documentElement.classList.toggle('dark-theme', newVal);
+  document.documentElement.classList.toggle('light-theme', !newVal);
+});
+
+onMounted(() => {
+  document.documentElement.classList.add('light-theme'); // par défaut
+  const user = localStorage.getItem('user');
+  if (user) {
+    connectedUser.value = JSON.parse(user);
+  }
+});
+
+function toggleTheme() {
+  isDark.value = !isDark.value;
+}
+
+function handleUserConnected(user) {
+  connectedUser.value = user;
+  localStorage.setItem('user', JSON.stringify(user));
+}
 </script>
 
 <style>
-/* STRUCTURE FLEX POUR PIED DE PAGE FIXÉ */
+/* STRUCTURE */
 .app-container {
   display: flex;
   flex-direction: column;
@@ -58,7 +68,7 @@ main {
   flex-grow: 1;
 }
 
-/* BASE GLOBALE */
+/* BASE */
 html,
 body {
   margin: 0;
