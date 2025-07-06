@@ -11,7 +11,7 @@ with app.app_context():
         user = Utilisateur(
             id=1,
             nom_utilisateur='admin',
-            email='admin@example.com',
+            email='admin@mail.com',
             mot_de_passe=mot_de_passe_hash,
             role='admin'
         )

@@ -90,45 +90,53 @@ export default {
     this.getLocation();
   },
   methods: {
+
     handleImageUpload(e) {
       const file = e.target.files[0];
       if (!file) return;
       this.processImage(file);
     },
-    processImage(file) {
+
+    async processImage(file) {
+        // Supprime l’image précédente si elle existait
         if (this.imageId) {
-            fetch(`http://localhost:5000/delete_temp/${this.imageId}`, {
-                method: 'DELETE'
-            });
+            try {
+                await fetch(`http://localhost:5000/delete_temp/${this.imageId}`, {
+                    method: 'DELETE'
+                });
+            } catch (err) {
+                console.error('Erreur suppression image précédente :', err);
+            }
         }
 
-      this.loading = true;
-      this.image = file;
-      this.imagePreview = URL.createObjectURL(file);
-      this.imageId = null;
-      this.etat = '';
-      this.etatAnnot = '';
+        this.loading = true;
+        this.image = file;
+        this.imagePreview = URL.createObjectURL(file);
+        this.imageId = null;
+        this.etat = '';
+        this.etatAnnot = '';
 
-      const formData = new FormData();
-      formData.append('image', file);
-      formData.append('mode_classification', 'auto');
+        const formData = new FormData();
+        formData.append('image', file);
+        formData.append('mode_classification', 'auto');
 
-      fetch('http://localhost:5000/upload', {
-        method: 'POST',
-        body: formData
-      })
+        fetch('http://localhost:5000/upload', {
+            method: 'POST',
+            body: formData
+        })
+
         .then(res => res.json())
         .then(data => {
-          this.imageId = data.image_id;
-          this.etat = data.classification_auto;
-          this.etatAnnot = data.classification_auto;
+            this.imageId = data.image_id;
+            this.etat = data.classification_auto;
+            this.etatAnnot = data.classification_auto;
         })
         .catch(err => {
-          console.error('Erreur classification :', err);
-          this.message = "Erreur lors de la classification.";
+            console.error('Erreur classification :', err);
+            this.message = "Erreur lors de la classification.";
         })
         .finally(() => {
-          this.loading = false;
+            this.loading = false;
         });
     },
     startCamera() {

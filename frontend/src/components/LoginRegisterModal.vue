@@ -1,47 +1,64 @@
 <template>
-  <div class="modal-overlay">
-    <div class="modal-content" :class="isDark ? 'dark' : 'light'">
-      <button class="close-button" @click="$emit('close')">✕</button>
+    <div class="modal-overlay">
+        <div class="modal-content" :class="isDark ? 'dark' : 'light'">
+            <button class="close-button" @click="$emit('close')">✕</button>
 
-      <component :is="currentForm" @switch-mode="toggleMode" />
+            <component
+                :is="currentForm"
+                @switch-mode="toggleMode"
+                @switchToLogin="switchToLogin"
+                @login-success="handleLoginSuccess"
+                :message="postRegisterMessage"
+            />
 
-      <div class="switch-mode">
-        <span>
-          {{ currentForm === 'LoginForm' ? "Pas encore inscrit ?" : "Déjà un compte ?" }}
-        </span>
-        <button @click="toggleMode">
-          {{ currentForm === 'LoginForm' ? "S’inscrire" : "Se connecter" }}
-        </button>
-      </div>
+            <div class="switch-mode">
+                <span>
+                {{ currentForm === 'LoginForm' ? "Pas encore inscrit ?" : "Déjà un compte ?" }}
+                </span>
+                <button @click="toggleMode">
+                {{ currentForm === 'LoginForm' ? "S’inscrire" : "Se connecter" }}
+                </button>
+            </div>
+        </div>
     </div>
-  </div>
 </template>
 
 <script>
-import LoginForm from "./LoginForm.vue";
-import RegisterForm from "./RegisterForm.vue";
+    import LoginForm from "./LoginForm.vue";
+    import RegisterForm from "./RegisterForm.vue";
 
-export default {
-  props: {
-    isDark: Boolean,
-  },
-  components: {
-    LoginForm,
-    RegisterForm,
-  },
-  data() {
-    return {
-      currentForm: "LoginForm",
+    export default {
+        props: {
+            isDark: Boolean,
+        },
+        components: {
+            LoginForm,
+            RegisterForm,
+        },
+        data() {
+            return {
+            currentForm: "LoginForm",
+            postRegisterMessage: ""
+            };
+        },
+        methods: {
+            toggleMode() {
+                this.currentForm =
+                this.currentForm === "LoginForm" ? "RegisterForm" : "LoginForm";
+                this.postRegisterMessage = "";
+            },
+            switchToLogin(message) {
+                this.postRegisterMessage = message || "";
+                this.currentForm = "LoginForm";
+            },
+            handleLoginSuccess(user) {
+                this.$emit('user-connected', user);
+                this.$emit('close');
+            }
+        }
     };
-  },
-  methods: {
-    toggleMode() {
-      this.currentForm =
-        this.currentForm === "LoginForm" ? "RegisterForm" : "LoginForm";
-    },
-  },
-};
 </script>
+
 
 <style>
 /* Overlay */

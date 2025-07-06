@@ -81,3 +81,11 @@ class Localisation(db.Model):
     pays = db.Column(db.Text)
 
     image = db.relationship('Image', backref=db.backref('localisation', uselist=False, cascade="all, delete"))
+
+# === Table des clés d'accès ===
+class CleAcces(db.Model):
+    __tablename__ = 'cles_acces'
+    id = db.Column(db.Integer, primary_key=True)
+    cle = db.Column(db.Text, unique=True, nullable=False)
+    valide = db.Column(db.Boolean, default=True)
+    role = db.Column(db.Text, default='agent')

@@ -1,11 +1,9 @@
 from flask import Blueprint, request, jsonify
 from app.extensions import bcrypt
-from database.utils.db_model import db, Utilisateur
+from database.utils.db_model import db, Utilisateur, CleAcces
 from database.utils.db_insert import ajouter_utilisateur
 
 auth_routes = Blueprint('auth', __name__)
-
-CLE_AGENT = "AGENT2025"
 
 @auth_routes.route('/register', methods=['POST'])
 def register():
@@ -13,20 +11,26 @@ def register():
     nom = data.get('nom_utilisateur')
     email = data.get('email')
     pw = data.get('mot_de_passe')
-    role = data.get('role', 'citoyen')
-    access_key = data.get('access_key', '')
+    role = 'citoyen'  # valeur par défaut
+    access_key = data.get('access_key', '').strip()
 
     if not all([nom, email, pw]):
         return jsonify({'error': 'Champs requis manquants'}), 400
 
-    if role == 'admin':
-        return jsonify({'error': 'Création admin interdite'}), 403
-
-    if role == 'agent' and access_key != CLE_AGENT:
-        return jsonify({'error': 'Clé d’accès invalide'}), 403
-
     if Utilisateur.query.filter_by(email=email).first():
         return jsonify({'error': 'Email déjà utilisé'}), 409
+
+    if access_key:
+        cle = CleAcces.query.filter_by(cle=access_key, valide=True, role='agent').first()
+        if cle:
+            role = 'agent'
+            cle.valide = False
+            db.session.commit()
+        else:
+            return jsonify({'error': 'Clé d’accès invalide ou expirée'}), 403
+
+    if role == 'admin':
+        return jsonify({'error': 'Création admin interdite'}), 403
 
     user = ajouter_utilisateur(nom, email, pw, role)
     return jsonify({
@@ -34,6 +38,15 @@ def register():
         'nom_utilisateur': user.nom_utilisateur,
         'role': user.role
     }), 201
+
+
+@auth_routes.route('/verify_key', methods=['GET'])
+def verify_key():
+    cle = request.args.get('cle')
+    if not cle:
+        return jsonify({'valide': False})
+    key = CleAcces.query.filter_by(cle=cle, valide=True, role='agent').first()
+    return jsonify({'valide': bool(key)})
 
 
 @auth_routes.route('/login', methods=['POST'])

@@ -8,8 +8,8 @@
     <nav class="nav-links">
       <router-link to="/">Accueil</router-link>
       <router-link to="/upload">Upload</router-link>
-      <router-link to="/dashboard">Dashboard</router-link>
       <router-link to="/map">Carte</router-link>
+      <router-link to="/dashboard">Tableau de Bord</router-link>
       <router-link to="/about">À propos</router-link>
     </nav>
 
@@ -18,19 +18,34 @@
         {{ isDark ? "☀️" : "🌙" }}
       </button>
 
-      <button class="login-btn" @click="$emit('open-login')">
-        Connexion / Inscription
-      </button>
+      <template v-if="user">
+        <span class="user-info">Bienvenue, {{ user.nom_utilisateur }}</span>
+        <button class="login-btn" @click="logout">Déconnexion</button>
+      </template>
+
+      <template v-else>
+        <button class="login-btn" @click="$emit('open-login')">
+          Connexion / Inscription
+        </button>
+      </template>
     </div>
   </header>
 </template>
 
-<script>
-export default {
-  props: {
-    isDark: Boolean
-  }
-};
+<script setup>
+import { useRouter } from 'vue-router';
+
+const { isDark, user } = defineProps({
+  isDark: Boolean,
+  user: Object
+});
+
+const router = useRouter();
+
+function logout() {
+  localStorage.removeItem('user');
+  router.go(); // rafraîchit sans recharger manuellement
+}
 </script>
 
 <style scoped>
@@ -113,5 +128,10 @@ export default {
 
 .login-btn:hover {
   background-color: #16a085;
+}
+
+.user-info {
+  font-weight: 500;
+  margin-right: 0.5rem;
 }
 </style>
