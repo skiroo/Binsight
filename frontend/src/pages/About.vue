@@ -1,41 +1,62 @@
 <template>
   <div class="about">
     <section class="hero">
-      <h1>À propos de <span class="highlight">VISIO</span></h1>
-      <p class="intro">
-        VISIO est une plateforme intelligente de suivi, d’analyse et de visualisation des dépôts sauvages.<br />
-        Grâce à l’IA, à la géolocalisation et à des outils interactifs, elle contribue à la préservation de notre environnement.
-      </p>
+      <h1>{{ text.title }} <span class="highlight">Binsight</span></h1>
+      <p class="intro">{{ text.intro }}</p>
     </section>
 
     <section class="features">
       <div class="card feature-card">
-        <h3> <strong>Notre mission</strong></h3>
-        <p>Lutter contre les dépôts sauvages en combinant technologie, citoyenneté et écologie.</p>
+        <h3><strong>{{ text.missionTitle }}</strong></h3>
+        <p>{{ text.mission }}</p>
       </div>
 
       <div class="card feature-card">
-        <h3> <strong>Notre équipe</strong></h3>
-        <p>Une équipe d’étudiants passionnés par l’innovation, la tech éthique et l’environnement.</p>
+        <h3><strong>{{ text.teamTitle }}</strong></h3>
+        <p>{{ text.team }}</p>
       </div>
 
       <div class="card feature-card">
-        <h3> <strong>Notre vision</strong></h3>
-        <p>Rendre la propreté urbaine plus intelligente, plus accessible et participative.</p>
+        <h3><strong>{{ text.visionTitle }}</strong></h3>
+        <p>{{ text.vision }}</p>
       </div>
     </section>
 
     <div class="conclusion">
-      <p>
-        VISIO est né dans le cadre d’un projet étudiant à vocation écologique.<br />
-        Nous croyons en la technologie au service du bien commun.
-      </p>
+      <p>{{ text.conclusion }}</p>
     </div>
   </div>
 </template>
 
 <script setup>
-defineProps({isDark: Boolean})
+const props = defineProps({ isDark: Boolean, lang: String });
+
+const text = {
+  title: props.lang === 'fr' ? 'À propos de' : 'About',
+  intro:
+    props.lang === 'fr'
+      ? 'Binsight est une plateforme intelligente de suivi, d’analyse et de visualisation des dépôts sauvages.\nGrâce à l’IA, à la géolocalisation et à des outils interactifs, elle contribue à la préservation de notre environnement.'
+      : 'Binsight is a smart platform for monitoring, analyzing, and visualizing illegal dumping.\nWith AI, geolocation, and interactive tools, it helps protect our environment.',
+  missionTitle: props.lang === 'fr' ? 'Notre mission' : 'Our mission',
+  mission:
+    props.lang === 'fr'
+      ? 'Lutter contre les dépôts sauvages en combinant technologie, citoyenneté et écologie.'
+      : 'Fight illegal dumping by combining technology, citizenship, and ecology.',
+  teamTitle: props.lang === 'fr' ? 'Notre équipe' : 'Our team',
+  team:
+    props.lang === 'fr'
+      ? 'Une équipe d’étudiants passionnés par l’innovation, la tech éthique et l’environnement.'
+      : 'A team of students passionate about innovation, ethical tech, and the environment.',
+  visionTitle: props.lang === 'fr' ? 'Notre vision' : 'Our vision',
+  vision:
+    props.lang === 'fr'
+      ? 'Rendre la propreté urbaine plus intelligente, plus accessible et participative.'
+      : 'Make urban cleanliness smarter, more accessible, and participative.',
+  conclusion:
+    props.lang === 'fr'
+      ? 'Binsight est né dans le cadre d’un projet étudiant à vocation écologique.\nNous croyons en la technologie au service du bien commun.'
+      : 'Binsight was born as a student project with an ecological purpose.\nWe believe in technology serving the common good.'
+};
 </script>
 
 <style scoped>
@@ -63,6 +84,7 @@ defineProps({isDark: Boolean})
   margin-left: auto;
   margin-right: auto;
   line-height: 1.6;
+  white-space: pre-line;
 }
 
 .features {
@@ -95,9 +117,10 @@ defineProps({isDark: Boolean})
   margin-left: auto;
   margin-right: auto;
   line-height: 1.5;
+  white-space: pre-line;
 }
 
-/* Mode sombre (optionnel si tu gères via classe globale) */
+/* Mode sombre */
 .dark-theme .about {
   --bg-color: #0e1015;
   --text-color: #ffffff;

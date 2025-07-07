@@ -3,7 +3,9 @@
     <Navbar
       :isDark="isDark"
       :user="connectedUser"
+      :lang="lang"
       @toggle-theme="toggleTheme"
+      @toggle-lang="toggleLang"
       @open-login="showModal = true"
     />
 
@@ -15,45 +17,50 @@
     />
 
     <main class="flex-grow">
-      <RouterView />
+      <RouterView :lang="lang" />
     </main>
 
-    <Footer />
+<Footer :lang="lang" />
+
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue';
-import Navbar from './components/Navbar.vue';
-import Footer from './components/Footer.vue';
-import LoginRegisterModal from './components/LoginRegisterModal.vue';
+import { ref, onMounted, watch } from 'vue'
+import Navbar from './components/Navbar.vue'
+import Footer from './components/Footer.vue'
+import LoginRegisterModal from './components/LoginRegisterModal.vue'
 
-const isDark = ref(false);
-const showModal = ref(false);
-const connectedUser = ref(null);
+const isDark = ref(false)
+const showModal = ref(false)
+const connectedUser = ref(null)
+const lang = ref('fr') // <-- Langue par défaut
 
-// Synchroniser le thème avec <html>
-watch(isDark, (newVal) => {
-  document.documentElement.classList.toggle('dark-theme', newVal);
-  document.documentElement.classList.toggle('light-theme', !newVal);
-});
-
-onMounted(() => {
-  document.documentElement.classList.add('light-theme'); // par défaut
-  const user = localStorage.getItem('user');
-  if (user) {
-    connectedUser.value = JSON.parse(user);
-  }
-});
+function toggleLang() {
+  lang.value = lang.value === 'fr' ? 'en' : 'fr'
+}
 
 function toggleTheme() {
-  isDark.value = !isDark.value;
+  isDark.value = !isDark.value
 }
 
 function handleUserConnected(user) {
-  connectedUser.value = user;
-  localStorage.setItem('user', JSON.stringify(user));
+  connectedUser.value = user
+  localStorage.setItem('user', JSON.stringify(user))
 }
+
+watch(isDark, (newVal) => {
+  document.documentElement.classList.toggle('dark-theme', newVal)
+  document.documentElement.classList.toggle('light-theme', !newVal)
+})
+
+onMounted(() => {
+  document.documentElement.classList.add('light-theme')
+  const user = localStorage.getItem('user')
+  if (user) {
+    connectedUser.value = JSON.parse(user)
+  }
+})
 </script>
 
 <style>

@@ -1,32 +1,44 @@
 <template>
   <div class="home">
     <section class="hero">
-      <h1>Bienvenue sur <span class="highlight">VISIO</span></h1>
+      <h1>
+        {{ lang === 'fr' ? 'Bienvenue sur' : 'Welcome to' }}
+        <span class="highlight">Binsight</span>
+      </h1>
       <p class="intro">
-        Plateforme intelligente de suivi et d’identification des déchets publics.<br />
-        Ensemble, luttons contre les dépôts sauvages grâce à la technologie.
+        {{
+          lang === 'fr'
+            ? "Plateforme intelligente de suivi et d’identification des déchets publics.\nEnsemble, luttons contre les dépôts sauvages grâce à la technologie."
+            : "Smart platform for monitoring and identifying public waste.\nTogether, let's fight illegal dumping with technology."
+        }}
       </p>
       <router-link to="/upload" class="btn-primary">
-        📤 Déposer une image
+        📤 {{ lang === 'fr' ? 'Déposer une image' : 'Upload an image' }}
       </router-link>
     </section>
 
     <section class="features">
       <div class="card feature-card">
-        <h3>📍 <strong>Géolocalisation</strong></h3>
-        <p>Identifiez et suivez les lieux de dépôts sauvages.</p>
+        <h3>📍 <strong>{{ lang === 'fr' ? 'Géolocalisation' : 'Geolocation' }}</strong></h3>
+        <p>{{ lang === 'fr' ? 'Identifiez et suivez les lieux de dépôts sauvages.' : 'Identify and track illegal dumping locations.' }}</p>
       </div>
       <div class="card feature-card">
-        <h3>🤖 <strong>IA & Reconnaissance</strong></h3>
-        <p>Analyse intelligente des images envoyées.</p>
+        <h3>🤖 <strong>{{ lang === 'fr' ? 'IA & Reconnaissance' : 'AI & Recognition' }}</strong></h3>
+        <p>{{ lang === 'fr' ? 'Analyse intelligente des images envoyées.' : 'Smart analysis of uploaded images.' }}</p>
       </div>
       <div class="card feature-card">
-        <h3>📊 <strong>Tableau de bord</strong></h3>
-        <p>Visualisation claire et intuitive des données.</p>
+        <h3>📊 <strong>{{ lang === 'fr' ? 'Tableau de bord' : 'Dashboard' }}</strong></h3>
+        <p>{{ lang === 'fr' ? 'Visualisation claire et intuitive des données.' : 'Clear and intuitive data visualization.' }}</p>
       </div>
     </section>
   </div>
 </template>
+
+<script setup>
+const { lang } = defineProps({
+  lang: String
+})
+</script>
 
 <style scoped>
 .home {
@@ -46,6 +58,7 @@
 .intro {
   font-size: 1.2rem;
   margin-bottom: 30px;
+  white-space: pre-line;
 }
 
 .btn-primary {

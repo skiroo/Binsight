@@ -1,23 +1,27 @@
 <template>
   <footer class="footer">
     <div class="footer-content">
-      <p>&copy; 2025 BinSight — Tous droits réservés</p>
+      <p>&copy; 2025 BinSight —
+        {{ lang === 'fr' ? 'Tous droits réservés' : 'All rights reserved' }}
+      </p>
       <nav class="footer-nav">
-      <RouterLink to="/about">À propos</RouterLink>
+        <RouterLink to="/about">
+          {{ lang === 'fr' ? 'À propos' : 'About' }}
+        </RouterLink>
       </nav>
     </div>
   </footer>
 </template>
 
-<script>
-export default {
-  name: "Footer",
-};
+<script setup>
+const { lang } = defineProps({
+  lang: String
+})
 </script>
 
 <style scoped>
 .footer {
-  background-color: #2c3e50; /* Même couleur que le header */
+  background-color: #2c3e50;
   color: white;
   padding: 20px 0;
   text-align: center;

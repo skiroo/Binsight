@@ -1,8 +1,7 @@
 <template>
   <div class="upload-container">
-    <h2>Téléversement d'une image</h2>
+    <h2>{{ lang === 'fr' ? "Téléversement d'une image" : "Upload an image" }}</h2>
 
-    <!-- Upload image ou prise de photo -->
     <input type="file" @change="handleImageUpload" accept="image/*" />
     <div :class="['camera-toggle', { active: cameraActive }]" @click="toggleCamera">
         <img src="@/assets/camera.png" alt="Camera" />
@@ -10,35 +9,30 @@
 
     <video ref="video" autoplay playsinline style="display:none; width: 100%; margin-top: 10px;"></video>
     <div v-if="cameraActive">
-      <button @click="capturePhoto">Capturer</button>
+      <button @click="capturePhoto">{{ lang === 'fr' ? "Capturer" : "Capture" }}</button>
     </div>
     <canvas ref="canvas" style="display:none;"></canvas>
 
-    <!-- Loader pendant le traitement -->
     <div v-if="loading">
-      <p>Classification automatique en cours...</p>
+      <p>{{ lang === 'fr' ? "Classification automatique en cours..." : "Automatic classification in progress..." }}</p>
       <div class="loader"></div>
     </div>
 
-    <!-- Aperçu image -->
     <div v-if="imagePreview && !loading">
-      <img :src="imagePreview" alt="Aperçu" class="preview" />
+      <img :src="imagePreview" alt="Preview" class="preview" />
     </div>
 
-    <!-- Affichage annotation actuelle -->
     <div v-if="etat && !loading">
-      <p><strong>État :</strong> {{ etat === 'dirty' ? 'Pleine' : etat === 'clean' ? 'Vide' : 'Non défini' }}</p>
+      <p><strong>{{ lang === 'fr' ? "État" : "Status" }} :</strong> {{ etat === 'dirty' ? (lang === 'fr' ? 'Pleine' : 'Full') : etat === 'clean' ? (lang === 'fr' ? 'Vide' : 'Empty') : (lang === 'fr' ? 'Non défini' : 'Undefined') }}</p>
     </div>
 
-    <!-- Choix manuel -->
     <div v-if="imageId && !loading">
-      <label><input type="radio" value="dirty" v-model="etatAnnot" /> Pleine</label>
-      <label><input type="radio" value="clean" v-model="etatAnnot" /> Vide</label>
+      <label><input type="radio" value="dirty" v-model="etatAnnot" /> {{ lang === 'fr' ? "Pleine" : "Full" }}</label>
+      <label><input type="radio" value="clean" v-model="etatAnnot" /> {{ lang === 'fr' ? "Vide" : "Empty" }}</label>
     </div>
 
-    <!-- Localisation -->
-    <h3>Adresse</h3>
-    <input v-model="adresseComplete" placeholder="Ex : 15 rue de Paris, 75000 Paris" @input="fetchAddressSuggestions" />
+    <h3>{{ lang === 'fr' ? "Adresse" : "Address" }}</h3>
+    <input v-model="adresseComplete" :placeholder="lang === 'fr' ? 'Ex : 15 rue de Paris, 75000 Paris' : 'E.g. 15 rue de Paris, 75000 Paris'" @input="fetchAddressSuggestions" />
     <ul v-if="suggestions.length" class="suggestions">
       <li v-for="(sug, index) in suggestions" :key="index" @click="applySuggestion(sug)">
         {{ sug.label }}
@@ -48,8 +42,7 @@
     <div id="map" style="height: 300px; margin-top: 10px;"></div>
     <p>Latitude : {{ localisation.lat }}, Longitude : {{ localisation.lon }}</p>
 
-    <!-- Bouton de validation -->
-    <button @click="submit" :disabled="loading || !image">Valider</button>
+    <button @click="submit" :disabled="loading || !image">{{ lang === 'fr' ? "Valider" : "Submit" }}</button>
 
     <transition name="fade">
       <p v-if="message" class="success-msg">{{ message }}</p>
@@ -62,6 +55,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
 export default {
+  props: ['lang'],
   data() {
     return {
       image: null,

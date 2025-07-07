@@ -1,4 +1,4 @@
-# VISIO - Vision Intelligente de Suivi et d'Identification des Ordures
+# Binsight- Vision Intelligente de Suivi et d'Identification des Ordures
 
 ## Thème : Image Processing
 

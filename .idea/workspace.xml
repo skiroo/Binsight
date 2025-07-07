@@ -4,7 +4,16 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="15ba0fae-d8a1-4d57-a29c-3e666c801560" name="Changes" comment="" />
+    <list default="true" id="15ba0fae-d8a1-4d57-a29c-3e666c801560" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/App.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/App.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/Footer.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/Footer.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/Navbar.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/Navbar.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/About.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/About.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Home.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Home.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Upload.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Upload.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/router.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/router.js" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -87,6 +96,7 @@
       <workItem from="1751528631139" duration="9759000" />
       <workItem from="1751637093446" duration="2770000" />
       <workItem from="1751829726286" duration="4414000" />
+      <workItem from="1751892943904" duration="1759000" />
     </task>
     <servers />
   </component>

@@ -2,15 +2,15 @@
   <header class="navbar">
     <div class="logo-title">
       <span class="logo">🗑️</span>
-      <h1 class="title">VISIO</h1>
+      <h1 class="title">Binsight</h1>
     </div>
 
     <nav class="nav-links">
-      <router-link to="/">Accueil</router-link>
-      <router-link to="/upload">Upload</router-link>
-      <router-link to="/map">Carte</router-link>
-      <router-link to="/dashboard">Tableau de Bord</router-link>
-      <router-link to="/about">À propos</router-link>
+      <router-link to="/">{{ lang === 'fr' ? "Accueil" : "Home" }}</router-link>
+      <router-link to="/upload">{{ lang === 'fr' ? "Image" : "Upload" }}</router-link>
+      <router-link to="/map">{{ lang === 'fr' ? "Carte" : "Map" }}</router-link>
+      <router-link to="/dashboard">{{ lang === 'fr' ? "Tableau de Bord" : "Dashboard" }}</router-link>
+      <router-link to="/about">{{ lang === 'fr' ? "À propos" : "About" }}</router-link>
     </nav>
 
     <div class="navbar-actions">
@@ -18,14 +18,23 @@
         {{ isDark ? "☀️" : "🌙" }}
       </button>
 
+      <!-- 🌐 Bouton langue -->
+      <button class="theme-btn" @click="$emit('toggle-lang')">
+        {{ lang === 'fr' ? "🇬🇧 EN" : "🇫🇷 FR" }}
+      </button>
+
       <template v-if="user">
-        <span class="user-info">Bienvenue, {{ user.nom_utilisateur }}</span>
-        <button class="login-btn" @click="logout">Déconnexion</button>
+        <span class="user-info">
+          {{ lang === 'fr' ? "Bienvenue" : "Welcome" }}, {{ user.nom_utilisateur }}
+        </span>
+        <button class="login-btn" @click="logout">
+          {{ lang === 'fr' ? "Déconnexion" : "Logout" }}
+        </button>
       </template>
 
       <template v-else>
         <button class="login-btn" @click="$emit('open-login')">
-          Connexion / Inscription
+          {{ lang === 'fr' ? "Connexion / Inscription" : "Login / Sign Up" }}
         </button>
       </template>
     </div>
@@ -35,16 +44,17 @@
 <script setup>
 import { useRouter } from 'vue-router';
 
-const { isDark, user } = defineProps({
+const { isDark, user, lang } = defineProps({
   isDark: Boolean,
-  user: Object
-});
+  user: Object,
+  lang: String
+})
 
-const router = useRouter();
+const router = useRouter()
 
 function logout() {
-  localStorage.removeItem('user');
-  router.go(); // rafraîchit sans recharger manuellement
+  localStorage.removeItem('user')
+  router.go() // rafraîchit la page
 }
 </script>
 
