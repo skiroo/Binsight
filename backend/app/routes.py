@@ -39,16 +39,17 @@ def upload_image():
     source = request.form.get("source", "citoyen")
 
     try:
+        # 1. Conversion et sauvegarde temporaire
         img = PILImage.open(file.stream).convert("RGB")
         img.thumbnail((1024, 1024))
         img.save(save_path, format='WEBP', quality=80, method=6)
 
-        mode = request.form.get('mode_classification', 'auto')
+        # 2. Traitement : caractéristiques + classification
         image_id, label, msg = traiter_image(save_path, utilisateur_id, source)
-
         if label == "non déterminé":
             msg = "Classification non déterminée. Veuillez annoter manuellement."
 
+        # 3. Lecture des champs du formulaire
         annotation = request.form.get('annotation')
         rue_nom = request.form.get('rue_nom')
         rue_num = request.form.get('rue_num')
@@ -58,12 +59,18 @@ def upload_image():
         lat = request.form.get('lat')
         lon = request.form.get('lon')
 
+        latitude = float(lat) if lat else None
+        longitude = float(lon) if lon else None
+        quartier = get_arrondissement_from_coords(latitude, longitude) if (latitude and longitude) else None
+
+        # 4. Mise à jour de l'annotation manuelle (si donnée)
         img_obj = Image.query.get(image_id)
         if img_obj:
             if annotation in ['dirty', 'clean']:
                 img_obj.etat_annot = annotation
                 db.session.commit()
 
+            # 5. Enregistrement de la localisation complète
             localisation = Localisation(
                 image_id=image_id,
                 nom_rue=rue_nom,
@@ -71,8 +78,9 @@ def upload_image():
                 code_postal=cp,
                 ville=ville,
                 pays=pays,
-                latitude=float(lat) if lat else None,
-                longitude=float(lon) if lon else None
+                latitude=latitude,
+                longitude=longitude,
+                quartier=quartier
             )
             db.session.add(localisation)
             db.session.commit()
@@ -80,12 +88,14 @@ def upload_image():
         return jsonify({
             'message': msg,
             'image_id': image_id,
-            'classification_auto': label
+            'classification_auto': label,
+            'quartier': quartier
         })
 
     finally:
         if os.path.exists(save_path):
             os.remove(save_path)
+
             
 
 @routes.route('/update/<int:image_id>', methods=['POST'])
@@ -106,6 +116,10 @@ def update_image(image_id):
         db.session.commit()
 
     if loc:
+        latitude = float(loc.get('lat')) if loc.get('lat') else None
+        longitude = float(loc.get('lon')) if loc.get('lon') else None
+        quartier = get_arrondissement_from_coords(latitude, longitude) if (latitude and longitude) else None
+
         localisation = Localisation.query.filter_by(image_id=image.id).first()
         if localisation:
             localisation.nom_rue = loc.get('rue_nom')
@@ -113,8 +127,9 @@ def update_image(image_id):
             localisation.code_postal = loc.get('cp')
             localisation.ville = loc.get('ville')
             localisation.pays = loc.get('pays')
-            localisation.latitude = float(loc.get('lat')) if loc.get('lat') else None
-            localisation.longitude = float(loc.get('lon')) if loc.get('lon') else None
+            localisation.latitude = latitude
+            localisation.longitude = longitude
+            localisation.quartier = quartier
         else:
             localisation = Localisation(
                 image_id=image.id,
@@ -123,8 +138,9 @@ def update_image(image_id):
                 code_postal=loc.get('cp'),
                 ville=loc.get('ville'),
                 pays=loc.get('pays'),
-                latitude=float(loc.get('lat')) if loc.get('lat') else None,
-                longitude=float(loc.get('lon')) if loc.get('lon') else None
+                latitude=latitude,
+                longitude=longitude,
+                quartier=quartier
             )
             db.session.add(localisation)
 
