@@ -1,58 +1,58 @@
 <template>
   <div class="map-wrapper">
-    <!-- Barre latérale -->
-    <div :class="['sidebar', isDarkMode ? 'sidebar-dark' : 'sidebar-light']">
-      <h3>Filtres</h3>
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <h3>{{ lang === 'fr' ? 'Filtres' : 'Filters' }}</h3>
 
-      <label><b>État :</b></label><br />
-      <label><input type="radio" value="all" v-model="filter" /> Tous</label><br />
-      <label><input type="radio" value="clean" v-model="filter" /> Propres</label><br />
-      <label><input type="radio" value="dirty" v-model="filter" /> Pleines</label><br /><br />
+      <label><b>{{ lang === 'fr' ? 'État' : 'Status' }} :</b></label><br />
+      <label><input type="radio" value="all" v-model="filter" /> {{ lang === 'fr' ? 'Tous' : 'All' }}</label><br />
+      <label><input type="radio" value="clean" v-model="filter" /> {{ lang === 'fr' ? 'Propres' : 'Clean' }}</label><br />
+      <label><input type="radio" value="dirty" v-model="filter" /> {{ lang === 'fr' ? 'Pleines' : 'Full' }}</label><br /><br />
 
-      <label><b>📍 Quartier :</b></label><br />
-      <input type="text" v-model="selectedArrondissement" list="arr-options" placeholder="Ex: Paris 15e" />
+      <label><b>📍 {{ lang === 'fr' ? 'Quartier' : 'District' }} :</b></label><br />
+      <input type="text" v-model="selectedArrondissement" list="arr-options" :placeholder="lang === 'fr' ? 'Ex: Paris 15e' : 'e.g., Paris 15'" />
       <datalist id="arr-options">
         <option v-for="a in arrondissements" :key="a" :value="a" />
       </datalist><br /><br />
 
-      <label><b>Date minimale :</b></label><br />
+      <label><b>{{ lang === 'fr' ? 'Date minimale' : 'Minimum date' }} :</b></label><br />
       <input type="date" v-model="dateMin" /><br /><br />
 
-      <label><b>Source :</b></label><br />
+      <label><b>{{ lang === 'fr' ? 'Source' : 'Source' }} :</b></label><br />
       <select v-model="selectedSource">
-        <option value="all">Toutes</option>
-        <option value="citoyen">Citoyen</option>
-        <option value="agent">Agent</option>
-        <option value="caméra">Caméra</option>
+        <option value="all">{{ lang === 'fr' ? 'Toutes' : 'All' }}</option>
+        <option value="citoyen">{{ lang === 'fr' ? 'Citoyen' : 'Citizen' }}</option>
+        <option value="agent">{{ lang === 'fr' ? 'Agent' : 'Agent' }}</option>
+        <option value="caméra">{{ lang === 'fr' ? 'Caméra' : 'Camera' }}</option>
       </select><br /><br />
 
-      <label><b>Autour de (lat, lon + km) :</b></label><br />
-      <input type="number" v-model="rayonLat" placeholder="Latitude" /><br />
-      <input type="number" v-model="rayonLon" placeholder="Longitude" /><br />
-      <input type="number" v-model="rayonKm" placeholder="Rayon (km)" /><br /><br />
+      <label><b>{{ lang === 'fr' ? 'Autour de (lat, lon + km)' : 'Around (lat, lon + km)' }} :</b></label><br />
+      <input type="number" v-model="rayonLat" :placeholder="lang === 'fr' ? 'Latitude' : 'Latitude'" /><br />
+      <input type="number" v-model="rayonLon" :placeholder="lang === 'fr' ? 'Longitude' : 'Longitude'" /><br />
+      <input type="number" v-model="rayonKm" :placeholder="lang === 'fr' ? 'Rayon (km)' : 'Radius (km)'" /><br /><br />
 
-      <button @click="recentrer">📍 Ma position</button>
+      <button @click="recentrer">📍 {{ lang === 'fr' ? 'Ma position' : 'My position' }}</button>
     </div>
 
-    <!-- Carte -->
+    <!-- Map -->
     <div class="map-container">
-      <h1>Carte des poubelles</h1>
+      <h1>{{ lang === 'fr' ? 'Carte des poubelles' : 'Bin Map' }}</h1>
       <div id="leaflet-map"></div>
 
       <div class="map-legend">
-        <div><span class="legend-dot dirty"></span> Pleine</div>
-        <div><span class="legend-dot clean"></span> Vide</div>
+        <div><span class="legend-dot dirty"></span> {{ lang === 'fr' ? 'Pleine' : 'Full' }}</div>
+        <div><span class="legend-dot clean"></span> {{ lang === 'fr' ? 'Vide' : 'Empty' }}</div>
       </div>
 
       <p class="map-count">
-        🔢 {{ visibleCount }} point{{ visibleCount === 1 ? '' : 's' }} affiché{{ visibleCount > 1 ? 's' : '' }}
+        🔢 {{ visibleCount }} {{ lang === 'fr' ? 'point(s) affiché(s)' : 'point(s) shown' }}
       </p>
 
       <div v-if="alertes.length > 0" class="alert-box">
-        <h3>🚨 Zones en alerte :</h3>
+        <h3>🚨 {{ lang === 'fr' ? 'Zones en alerte :' : 'Alert zones:' }}</h3>
         <ul>
           <li v-for="a in alertes" :key="a.quartier">
-            {{ a.quartier }} : {{ a.nb_dirty }} poubelles pleines
+            {{ a.quartier }} : {{ a.nb_dirty }} {{ lang === 'fr' ? 'poubelles pleines' : 'full bins' }}
           </li>
         </ul>
       </div>
@@ -69,6 +69,11 @@ import 'leaflet.markercluster/dist/MarkerCluster.css'
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css'
 import { getLocalisations, getAlerts } from '@/services/api'
 
+const props = defineProps({
+  isDark: Boolean,
+  lang: String
+})
+
 const filter = ref('all')
 const selectedArrondissement = ref('all')
 const selectedSource = ref('all')
@@ -79,16 +84,6 @@ const rayonKm = ref(null)
 const arrondissements = ref([])
 const visibleCount = ref(0)
 const alertes = ref([])
-
-const isDarkMode = ref(document.body.classList.contains("dark-mode"))
-
-const observer = new MutationObserver(() => {
-  isDarkMode.value = document.body.classList.contains("dark-mode")
-})
-
-onMounted(() => {
-  observer.observe(document.body, { attributes: true, attributeFilter: ["class"] })
-})
 
 let map = null
 let markerGroup = null
@@ -176,10 +171,10 @@ onMounted(async () => {
 })
 </script>
 
+
 <style scoped>
 .map-wrapper {
   display: flex;
-  align-items: flex-start;
   gap: 20px;
   padding: 20px;
   flex-wrap: wrap;
@@ -187,64 +182,136 @@ onMounted(async () => {
 
 .sidebar {
   width: 220px;
-  padding: 20px;
+  padding: 15px;
   border-radius: 10px;
   flex-shrink: 0;
-  border: 1px solid #ddd;
-}
-
-.sidebar-light {
-  background-color: #ffffff;
-  color: #000000;
-}
-
-.sidebar-light input,
-.sidebar-light select {
-  background-color: #ffffff;
-  color: #000000;
-  border: 1px solid #ccc;
-}
-
-.sidebar-light button {
-  background-color: #f5f5f5;
-  color: #000000;
-  border: 1px solid #bbb;
-  padding: 6px 12px;
-  cursor: pointer;
-}
-
-.sidebar-dark {
-  background-color: #121212;
-  color: #eeeeee;
-  border: 1px solid #2a2a2a;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-}
-
-.sidebar-dark input,
-.sidebar-dark select {
-  background-color: #1e1e1e;
-  color: #f5f5f5;
   border: 1px solid #444;
-  padding: 6px 10px;
-  border-radius: 6px;
+  background-color: var(--sidebar-bg);
+  color: var(--sidebar-text);
+  font-size: 14px;
 }
 
-.sidebar-dark input::placeholder {
-  color: #888;
+.sidebar h3 {
+  margin-bottom: 10px;
+  font-size: 18px;
+  font-weight: bold;
 }
 
-.sidebar-dark button {
-  background-color: #2b2b2b;
-  color: #fff;
-  border: 1px solid #555;
-  padding: 8px 12px;
+.sidebar label {
+  display: block;
+  margin: 6px 0 2px;
+  font-weight: 600;
+}
+
+.sidebar input,
+.sidebar select,
+.sidebar button {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 13px;
+  margin-bottom: 8px;
   border-radius: 6px;
+  border: 1px solid var(--input-border);
+  background-color: var(--input-bg);
+  color: var(--input-text);
+  box-sizing: border-box;
+}
+
+.sidebar input[type="radio"] {
+  width: auto;
+  margin-right: 6px;
+  accent-color: var(--accent-color);
+}
+
+.sidebar button {
+  background-color: var(--btn-bg);
+  color: var(--btn-text);
+  border: 1px solid var(--btn-border);
   cursor: pointer;
   transition: background-color 0.2s ease;
 }
 
-.sidebar-dark button:hover {
-  background-color: #3a3a3a;
+.sidebar button:hover {
+  background-color: var(--btn-hover);
+}
+
+:root {
+  --sidebar-bg: #ffffff;
+  --sidebar-text: #000;
+  --input-bg: #ffffff;
+  --input-text: #000;
+  --input-border: #ccc;
+  --btn-bg: #f0f0f0;
+  --btn-text: #000;
+  --btn-border: #bbb;
+  --btn-hover: #e0e0e0;
+  --accent-color: #10b981;
+}
+
+body.dark-theme {
+  --sidebar-bg: #101010;
+  --sidebar-text: #f5f5f5;
+  --input-bg: #1f1f1f;
+  --input-text: #f5f5f5;
+  --input-border: #555;
+  --btn-bg: #2a2a2a;
+  --btn-text: #fff;
+  --btn-border: #444;
+  --btn-hover: #3a3a3a;
+  --accent-color: #10b981;
+}
+
+input, select, button {
+  width: 100%;
+  padding: 6px 10px;
+  margin-bottom: 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+  background-color: var(--input-bg);
+  color: var(--input-text);
+}
+
+input[type="radio"] {
+  width: auto;
+  margin-right: 5px;
+  accent-color: var(--accent-color);
+}
+
+button {
+  cursor: pointer;
+  border: 1px solid var(--btn-border);
+  background-color: var(--btn-bg);
+  color: var(--btn-text);
+  transition: background-color 0.2s ease;
+}
+
+button:hover {
+  background-color: var(--btn-hover);
+}
+
+:root {
+  --sidebar-bg: #ffffff;
+  --sidebar-text: #000;
+  --input-bg: #ffffff;
+  --input-text: #000;
+  --btn-bg: #f5f5f5;
+  --btn-text: #000;
+  --btn-border: #ccc;
+  --btn-hover: #e0e0e0;
+  --accent-color: #10b981;
+}
+
+body.dark-theme {
+  --sidebar-bg: #1a1a1a;
+  --sidebar-text: #f5f5f5;
+  --input-bg: #2a2a2a;
+  --input-text: #f5f5f5;
+  --btn-bg: #333;
+  --btn-text: #fff;
+  --btn-border: #555;
+  --btn-hover: #444;
+  --accent-color: #10b981;
 }
 
 .map-container {
@@ -287,9 +354,8 @@ onMounted(async () => {
 }
 
 .map-count {
-  margin-top: 5px;
   font-size: 14px;
-  color: #333;
+  color: var(--sidebar-text);
 }
 
 .alert-box {
