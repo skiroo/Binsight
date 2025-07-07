@@ -426,4 +426,32 @@ p {
 .suggestions li:hover {
   background-color: #f0f0f0;
 }
+/* Suggestions (input autocomplete) en mode sombre */
+.dark-theme .leaflet-control-geocoder form input,
+.dark-theme .autocomplete-suggestions,
+.dark-theme .leaflet-geosearch-bar input,
+.dark-theme .leaflet-geosearch-bar .suggestions {
+  color: white !important;
+  background-color: #1e1e1e !important;
+  border-color: #444 !important;
+}
+
+.dark-theme .leaflet-geosearch-bar .suggestions > * {
+  color: white !important;
+  background-color: #2a2a2a !important;
+  border-bottom: 1px solid #444;
+}
+.dark-theme .suggestions {
+  background-color: #1f2937; /* fond sombre */
+  color: #f3f3f3;            /* texte clair */
+  border: 1px solid #374151;
+}
+
+.dark-theme .suggestions li {
+  color: #f3f3f3;
+}
+
+.dark-theme .suggestions li:hover {
+  background-color: #374151;
+}
 </style>
