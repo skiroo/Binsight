@@ -1,4 +1,5 @@
-from flask import Flask
+import pandas as pd
+from flask import Flask, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
 import os
@@ -26,6 +27,16 @@ def create_app():
     with app.app_context():
         db.create_all()
 
+    @app.route("/api/geojson")
+    def get_geojson_data():
+        try:
+            loc = pd.read_csv("data/localisation.csv")
+            img = pd.read_csv("data/images.csv")
+            df = loc.merge(img, left_on="image_id", right_on="id")
+            df = df[["latitude", "longitude", "etat_annot", "fichier_nom"]]
+            return jsonify(df.to_dict(orient="records"))
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
 
     return app
 

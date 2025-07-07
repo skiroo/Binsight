@@ -1,40 +1,40 @@
 <template>
   <div class="map-container">
     <h1>🗺️ Carte interactive des poubelles annotées</h1>
-    <div ref="mapContainer" class="map" />
+    <div id="leaflet-map" style="height: 600px; border-radius: 12px;"></div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import mapboxgl from 'mapbox-gl'
-import 'mapbox-gl/dist/mapbox-gl.css'
-
-const mapContainer = ref(null)
-const map = ref(null)
-
-// ⚠️ Remplace cette clé par ta propre clé Mapbox si besoin
-mapboxgl.accessToken = 'pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4Nm52eTA2emYycXBndjZ4bWl3N3gifQ.1JY8uYvXDsTkFgF7jVIR0g'
+import {onMounted} from 'vue'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
 
 onMounted(async () => {
-  const response = await fetch('http://localhost:5000/api/localisation') // ← à adapter si nécessaire
+  const response = await fetch('http://localhost:5000/api/localisation')
   const data = await response.json()
 
-  map.value = new mapboxgl.Map({
-    container: mapContainer.value,
-    style: 'mapbox://styles/mapbox/streets-v11',
-    center: [2.3522, 48.8566],
-    zoom: 11,
-  })
+  const map = L.map('leaflet-map').setView([48.8566, 2.3522], 13)
 
-  // Ajout des points
-  data.forEach((point) => {
-    new mapboxgl.Marker({
-      color: point.etat_annot === 'dirty' ? 'red' : 'green',
-    })
-      .setLngLat([point.longitude, point.latitude])
-      .setPopup(new mapboxgl.Popup().setHTML(`<b>${point.fichier_nom}</b><br>${point.etat_annot}`))
-      .addTo(map.value)
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map)
+
+  data.forEach(point => {
+    const color = point.etat_annot === 'dirty' ? 'red' : 'green'
+    const marker = L.circleMarker([point.latitude, point.longitude], {
+      radius: 8,
+      fillColor: color,
+      color: color,
+      weight: 1,
+      opacity: 1,
+      fillOpacity: 0.8
+    }).addTo(map)
+
+    marker.bindPopup(`
+      <b>${point.fichier_nom}</b><br/>
+      État : ${point.etat_annot === 'dirty' ? 'Pleine' : 'Vide'}
+    `)
   })
 })
 </script>
@@ -46,10 +46,9 @@ onMounted(async () => {
   margin: auto;
 }
 
-.map {
+#leaflet-map {
   width: 100%;
   height: 600px;
-  border-radius: 12px;
   box-shadow: 0 0 12px rgba(0, 0, 0, 0.1);
 }
 </style>

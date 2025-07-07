@@ -5,11 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="15ba0fae-d8a1-4d57-a29c-3e666c801560" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend/app/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/app.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/package.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/pages/Map.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Map.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Upload.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Upload.vue" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -92,7 +90,7 @@
       <updated>1751528630116</updated>
       <workItem from="1751528631139" duration="9759000" />
       <workItem from="1751637093446" duration="2770000" />
-      <workItem from="1751829726286" duration="1448000" />
+      <workItem from="1751829726286" duration="2909000" />
     </task>
     <servers />
   </component>
