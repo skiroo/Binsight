@@ -29,9 +29,13 @@
 </template>
 
 <script setup>
-const props = defineProps({ isDark: Boolean, lang: String });
+import { computed } from 'vue'
 
-const text = {
+const props = defineProps({
+  lang: String
+})
+
+const text = computed(() => ({
   title: props.lang === 'fr' ? 'À propos de' : 'About',
   intro:
     props.lang === 'fr'
@@ -56,7 +60,7 @@ const text = {
     props.lang === 'fr'
       ? 'Binsight est né dans le cadre d’un projet étudiant à vocation écologique.\nNous croyons en la technologie au service du bien commun.'
       : 'Binsight was born as a student project with an ecological purpose.\nWe believe in technology serving the common good.'
-};
+}))
 </script>
 
 <style scoped>
