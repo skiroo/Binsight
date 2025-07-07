@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from PIL import Image as PILImage
 from werkzeug.utils import secure_filename
 from datetime import datetime
+import requests
 import os
 
 from app.utils.rules import appliquer_regles_sur_image
@@ -34,37 +35,20 @@ def upload_image():
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
     save_path = os.path.join(UPLOAD_FOLDER, filename)
 
+    utilisateur_id = request.form.get("utilisateur_id")
+    source = request.form.get("source", "citoyen")
+
     try:
-        # Compression et conversion
         img = PILImage.open(file.stream).convert("RGB")
-        img.thumbnail((1024, 1024))  # Redimensionnement
+        img.thumbnail((1024, 1024))
         img.save(save_path, format='WEBP', quality=80, method=6)
 
-        # Déterminer l'utilisateur
-        utilisateur_id = request.form.get('utilisateur_id')
-        try:
-            utilisateur_id = int(utilisateur_id)
-        except (TypeError, ValueError):
-            utilisateur_id = 2  # ID par défaut pour utilisateurs non connectés
-
-        source = request.form.get('source', 'citoyen')
-
-        # Classification
         mode = request.form.get('mode_classification', 'auto')
-        if mode == 'manuel':
-            image_id, label, msg = traiter_image(save_path, utilisateur_id, source)
-            label = None
-            msg = "Aucune classification automatique effectuée."
-        elif mode == 'auto':
-            image_id, label, msg = traiter_image(save_path, utilisateur_id, source)
-        elif mode == 'ia':
-            image_id, label, msg = traiter_image(save_path, utilisateur_id, source)
-            label, msg = "non supporté", "Classification IA non encore disponible"
-        else:
-            image_id, label, msg = traiter_image(save_path, utilisateur_id, source)
-            label, msg = None, f"Mode de classification inconnu : {mode}"
+        image_id, label, msg = traiter_image(save_path, utilisateur_id, source)
 
-        # Données supplémentaires
+        if label == "non déterminé":
+            msg = "Classification non déterminée. Veuillez annoter manuellement."
+
         annotation = request.form.get('annotation')
         rue_nom = request.form.get('rue_nom')
         rue_num = request.form.get('rue_num')
@@ -74,11 +58,11 @@ def upload_image():
         lat = request.form.get('lat')
         lon = request.form.get('lon')
 
-        # Mise à jour image
         img_obj = Image.query.get(image_id)
         if img_obj:
-            img_obj.etat_annot = annotation if annotation in ['dirty', 'clean'] else None
-            db.session.commit()
+            if annotation in ['dirty', 'clean']:
+                img_obj.etat_annot = annotation
+                db.session.commit()
 
             localisation = Localisation(
                 image_id=image_id,
@@ -102,7 +86,7 @@ def upload_image():
     finally:
         if os.path.exists(save_path):
             os.remove(save_path)
-
+            
 
 @routes.route('/update/<int:image_id>', methods=['POST'])
 def update_image(image_id):
@@ -346,6 +330,41 @@ def verify_data():
         'erreurs_detectees': len(erreurs),
         'details': erreurs
     })
+
+
+@routes.route('/api/localisations', methods=['GET'])
+def get_all_localisations():
+    localisations = Localisation.query.join(Image).all()
+    result = []
+
+    for loc in localisations:
+        if loc.latitude and loc.longitude:
+            result.append({
+                'latitude': loc.latitude,
+                'longitude': loc.longitude,
+                'etat_annot': loc.image.etat_annot,
+                'fichier_nom': loc.image.fichier_nom,
+                'ville': loc.ville,
+                'quartier': loc.quartier,
+                'id': loc.image_id
+            })
+
+    return jsonify(result)
+
+
+def get_arrondissement_from_coords(lat, lon):
+    try:
+        url = f"https://nominatim.openstreetmap.org/reverse?lat={lat}&lon={lon}&format=json&addressdetails=1"
+        headers = { "User-Agent": "VISIO-Efrei/1.0" }
+        res = requests.get(url, headers=headers)
+        if res.status_code == 200:
+            data = res.json()
+            addr = data.get('address', {})
+            arrondissement = addr.get('suburb') or addr.get('city_district') or addr.get('municipality')
+            return arrondissement
+    except Exception as e:
+        print("Erreur géocodage :", e)
+    return None
 
 
 # ============================================================================

@@ -11,4 +11,7 @@ export const login = (email, mot_de_passe) =>
 export const register = (data) =>
     API.post('/register', data);
 
+export const getLocalisations = () =>
+    API.get('/api/localisations');
+
 export default API;

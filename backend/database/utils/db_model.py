@@ -79,6 +79,7 @@ class Localisation(db.Model):
     ville = db.Column(db.Text)
     code_postal = db.Column(db.Text)
     pays = db.Column(db.Text)
+    quartier = db.Column(db.Text)
 
     image = db.relationship('Image', backref=db.backref('localisation', uselist=False, cascade="all, delete"))
 

@@ -67,7 +67,7 @@ def ajouter_regle(nom_regle, condition_rc, description="", active=True):
     return regle
 
 # === Localisation ===
-def ajouter_localisation(image_id, longitude, latitude, numero_rue, nom_rue, ville, code_postal, pays):
+def ajouter_localisation(image_id, longitude, latitude, numero_rue, nom_rue, ville, code_postal, pays, quartier=None):
     loc = Localisation(
         image_id=image_id,
         longitude=longitude,
@@ -76,7 +76,8 @@ def ajouter_localisation(image_id, longitude, latitude, numero_rue, nom_rue, vil
         nom_rue=nom_rue,
         ville=ville,
         code_postal=code_postal,
-        pays=pays
+        pays=pays,
+        quartier=quartier
     )
     db.session.add(loc)
     db.session.commit()

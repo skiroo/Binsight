@@ -4,11 +4,13 @@
 
     <!-- Upload image ou prise de photo -->
     <input type="file" @change="handleImageUpload" accept="image/*" />
-    <button @click="startCamera">Prendre une photo</button>
+    <div :class="['camera-toggle', { active: cameraActive }]" @click="toggleCamera">
+        <img src="@/assets/camera.png" alt="Camera" />
+    </div>
+
     <video ref="video" autoplay playsinline style="display:none; width: 100%; margin-top: 10px;"></video>
     <div v-if="cameraActive">
       <button @click="capturePhoto">Capturer</button>
-      <button @click="stopCamera">Fermer la caméra</button>
     </div>
     <canvas ref="canvas" style="display:none;"></canvas>
 
@@ -98,6 +100,8 @@ export default {
     },
 
     async processImage(file) {
+        this.message = '';
+
         // Supprime l’image précédente si elle existait
         if (this.imageId) {
             try {
@@ -133,6 +137,12 @@ export default {
             this.imageId = data.image_id;
             this.etat = data.classification_auto;
             this.etatAnnot = data.classification_auto;
+
+            if (data.classification_auto === 'non déterminé') {
+                this.message = 'Classification non déterminée. Veuillez annoter manuellement.';
+            } else {
+                this.message = data.message || '';
+            }
         })
         .catch(err => {
             console.error('Erreur classification :', err);
@@ -142,26 +152,29 @@ export default {
             this.loading = false;
         });
     },
-    startCamera() {
-      this.cameraActive = true;
-      navigator.mediaDevices.getUserMedia({ video: true })
-        .then(stream => {
-          this.$refs.video.srcObject = stream;
-          this.$refs.video.style.display = 'block';
-        })
-        .catch(err => {
-          console.error("Erreur caméra :", err);
-        });
+
+    toggleCamera() {
+        if (this.cameraActive) {
+            const stream = this.$refs.video?.srcObject;
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+            this.$refs.video.srcObject = null;
+            this.cameraActive = false;
+            this.$refs.video.style.display = 'none';
+        } else {
+            navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                this.$refs.video.srcObject = stream;
+                this.$refs.video.style.display = 'block';
+                this.cameraActive = true;
+            })
+            .catch(err => {
+                console.error("Erreur caméra :", err);
+            });
+        }
     },
-    stopCamera() {
-      const stream = this.$refs.video.srcObject;
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-        this.$refs.video.srcObject = null;
-        this.cameraActive = false;
-        this.$refs.video.style.display = 'none';
-      }
-    },
+
     capturePhoto() {
       const video = this.$refs.video;
       const canvas = this.$refs.canvas;
@@ -453,5 +466,33 @@ p {
 
 .dark-theme .suggestions li:hover {
   background-color: #374151;
+}
+
+/* Prendre photo */
+.camera-toggle {
+  width: 60px;
+  height: 60px;
+  margin: 12px auto;
+  border-radius: 50%;
+  background-color: white;
+  border: 2px solid #10b981;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.camera-toggle img {
+  width: 32px;
+  height: 32px;
+}
+
+.camera-toggle.active {
+  background-color: #10b981;
+}
+
+.camera-active .camera-toggle {
+  background-color: #10b981;
 }
 </style>

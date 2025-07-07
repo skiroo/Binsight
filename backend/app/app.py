@@ -18,18 +18,6 @@ def create_app():
 
     CORS(app, origins=["http://localhost:5173"])
 
-    @app.route("/api/geojson")
-    def get_geojson_data():
-        try:
-            loc = pd.read_csv("`../localisation.csv")
-            img = pd.read_csv("../images.csv")
-            df = loc.merge(img, left_on="image_id", right_on="id")
-            df = df[["latitude", "longitude", "etat_annot", "fichier_nom"]]
-            return jsonify(df.to_dict(orient="records"))
-        except Exception as e:
-            return jsonify({"error": str(e)}), 500
-
-
     db.init_app(app)
     bcrypt.init_app(app)
 
