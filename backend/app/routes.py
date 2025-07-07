@@ -40,22 +40,31 @@ def upload_image():
         img.thumbnail((1024, 1024))  # Redimensionnement
         img.save(save_path, format='WEBP', quality=80, method=6)
 
+        # Déterminer l'utilisateur
+        utilisateur_id = request.form.get('utilisateur_id')
+        try:
+            utilisateur_id = int(utilisateur_id)
+        except (TypeError, ValueError):
+            utilisateur_id = 2  # ID par défaut pour utilisateurs non connectés
+
+        source = request.form.get('source', 'citoyen')
+
         # Classification
         mode = request.form.get('mode_classification', 'auto')
         if mode == 'manuel':
-            image_id, label, msg = traiter_image(save_path)
+            image_id, label, msg = traiter_image(save_path, utilisateur_id, source)
             label = None
             msg = "Aucune classification automatique effectuée."
         elif mode == 'auto':
-            image_id, label, msg = traiter_image(save_path)
+            image_id, label, msg = traiter_image(save_path, utilisateur_id, source)
         elif mode == 'ia':
-            image_id, label, msg = traiter_image(save_path)
+            image_id, label, msg = traiter_image(save_path, utilisateur_id, source)
             label, msg = "non supporté", "Classification IA non encore disponible"
         else:
-            image_id, label, msg = traiter_image(save_path)
+            image_id, label, msg = traiter_image(save_path, utilisateur_id, source)
             label, msg = None, f"Mode de classification inconnu : {mode}"
 
-        # Récupération des données supplémentaires
+        # Données supplémentaires
         annotation = request.form.get('annotation')
         rue_nom = request.form.get('rue_nom')
         rue_num = request.form.get('rue_num')
@@ -65,13 +74,12 @@ def upload_image():
         lat = request.form.get('lat')
         lon = request.form.get('lon')
 
-        # Mise à jour dans la table Image
+        # Mise à jour image
         img_obj = Image.query.get(image_id)
         if img_obj:
             img_obj.etat_annot = annotation if annotation in ['dirty', 'clean'] else None
             db.session.commit()
 
-            # Création de la localisation
             localisation = Localisation(
                 image_id=image_id,
                 nom_rue=rue_nom,

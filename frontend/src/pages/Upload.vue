@@ -117,8 +117,11 @@ export default {
         this.etatAnnot = '';
 
         const formData = new FormData();
+        const user = JSON.parse(localStorage.getItem('user'));
         formData.append('image', file);
         formData.append('mode_classification', 'auto');
+        formData.append('utilisateur_id', user?.id || '');
+        formData.append('source', user?.role || 'citoyen');
 
         fetch('http://localhost:5000/upload', {
             method: 'POST',
