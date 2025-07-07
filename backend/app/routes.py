@@ -371,7 +371,7 @@ def get_all_localisations():
 def get_arrondissement_from_coords(lat, lon):
     try:
         url = f"https://nominatim.openstreetmap.org/reverse?lat={lat}&lon={lon}&format=json&addressdetails=1"
-        headers = { "User-Agent": "VISIO-Efrei/1.0" }
+        headers = { "User-Agent": "Binsight-Efrei/1.0" }
         res = requests.get(url, headers=headers)
         if res.status_code == 200:
             data = res.json()
@@ -387,5 +387,5 @@ def get_arrondissement_from_coords(lat, lon):
 
 @routes.route('/')
 def home():
-    return "<h1>VISIO</h1>" \
+    return "<h1>BinSight</h1>" \
     "<h2>Bienvenue sur l'API de suivi intelligent des poubelles</h2>"

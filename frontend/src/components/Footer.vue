@@ -1,7 +1,7 @@
 <template>
   <footer class="footer">
     <div class="footer-content">
-      <p>&copy; 2025 VISIO — Tous droits réservés</p>
+      <p>&copy; 2025 BinSight — Tous droits réservés</p>
       <nav class="footer-nav">
       <RouterLink to="/about">À propos</RouterLink>
       </nav>
