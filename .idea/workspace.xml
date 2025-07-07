@@ -4,9 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="15ba0fae-d8a1-4d57-a29c-3e666c801560" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Map.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Map.vue" afterDir="false" />
-    </list>
+    <list default="true" id="15ba0fae-d8a1-4d57-a29c-3e666c801560" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -88,7 +86,7 @@
       <updated>1751528630116</updated>
       <workItem from="1751528631139" duration="9759000" />
       <workItem from="1751637093446" duration="2770000" />
-      <workItem from="1751829726286" duration="4094000" />
+      <workItem from="1751829726286" duration="4414000" />
     </task>
     <servers />
   </component>
