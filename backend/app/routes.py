@@ -362,7 +362,9 @@ def get_all_localisations():
                 'fichier_nom': loc.image.fichier_nom,
                 'ville': loc.ville,
                 'quartier': loc.quartier,
-                'id': loc.image_id
+                'id': loc.image_id,
+                'date_upload': loc.image.date_upload.isoformat(),
+                'source': loc.image.source,
             })
 
     return jsonify(result)
@@ -382,10 +384,30 @@ def get_arrondissement_from_coords(lat, lon):
         print("Erreur géocodage :", e)
     return None
 
+def get_alerts():
+    seuil = 10  # Seuil critique à partir duquel on alerte
+    alerts = []
+
+    # Compter les poubelles "dirty" par quartier
+    results = db.session.query(
+        Localisation.quartier,
+        db.func.count(Image.id)
+    ).join(Image).filter(Image.etat_annot == 'dirty')\
+     .group_by(Localisation.quartier).all()
+
+    for quartier, count in results:
+        if quartier and count >= seuil:
+            alerts.append({
+                'quartier': quartier,
+                'nb_dirty': count
+            })
+
+    return jsonify({'alertes': alerts, 'seuil': seuil})
+
 
 # ============================================================================
 
 @routes.route('/')
 def home():
-    return "<h1>BinSight</h1>" \
+    return "<h1>Binsight</h1>" \
     "<h2>Bienvenue sur l'API de suivi intelligent des poubelles</h2>"

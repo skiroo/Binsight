@@ -15,3 +15,8 @@ export const getLocalisations = () =>
     API.get('/api/localisations');
 
 export default API;
+
+export async function getAlerts() {
+  return await axios.get('/api/alerts')
+}
+

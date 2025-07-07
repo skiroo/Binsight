@@ -1,20 +1,36 @@
 <template>
   <div class="map-wrapper">
     <!-- Barre latérale -->
-    <div class="sidebar">
+    <div :class="['sidebar', isDarkMode ? 'sidebar-dark' : 'sidebar-light']">
       <h3>Filtres</h3>
+
+      <label><b>État :</b></label><br />
       <label><input type="radio" value="all" v-model="filter" /> Tous</label><br />
       <label><input type="radio" value="clean" v-model="filter" /> Propres</label><br />
-      <label><input type="radio" value="dirty" v-model="filter" /> Pleines</label><br />
+      <label><input type="radio" value="dirty" v-model="filter" /> Pleines</label><br /><br />
 
-      <br />
-      <label><b>Arrondissement :</b></label><br />
-      <select v-model="selectedArrondissement">
-        <option value="all">Tous</option>
-        <option v-for="a in arrondissements" :key="a" :value="a">{{ a }}</option>
-      </select>
+      <label><b>📍 Quartier :</b></label><br />
+      <input type="text" v-model="selectedArrondissement" list="arr-options" placeholder="Ex: Paris 15e" />
+      <datalist id="arr-options">
+        <option v-for="a in arrondissements" :key="a" :value="a" />
+      </datalist><br /><br />
 
-      <br /><br />
+      <label><b>Date minimale :</b></label><br />
+      <input type="date" v-model="dateMin" /><br /><br />
+
+      <label><b>Source :</b></label><br />
+      <select v-model="selectedSource">
+        <option value="all">Toutes</option>
+        <option value="citoyen">Citoyen</option>
+        <option value="agent">Agent</option>
+        <option value="caméra">Caméra</option>
+      </select><br /><br />
+
+      <label><b>Autour de (lat, lon + km) :</b></label><br />
+      <input type="number" v-model="rayonLat" placeholder="Latitude" /><br />
+      <input type="number" v-model="rayonLon" placeholder="Longitude" /><br />
+      <input type="number" v-model="rayonKm" placeholder="Rayon (km)" /><br /><br />
+
       <button @click="recentrer">📍 Ma position</button>
     </div>
 
@@ -31,6 +47,15 @@
       <p class="map-count">
         🔢 {{ visibleCount }} point{{ visibleCount === 1 ? '' : 's' }} affiché{{ visibleCount > 1 ? 's' : '' }}
       </p>
+
+      <div v-if="alertes.length > 0" class="alert-box">
+        <h3>🚨 Zones en alerte :</h3>
+        <ul>
+          <li v-for="a in alertes" :key="a.quartier">
+            {{ a.quartier }} : {{ a.nb_dirty }} poubelles pleines
+          </li>
+        </ul>
+      </div>
     </div>
   </div>
 </template>
@@ -42,104 +67,111 @@ import 'leaflet/dist/leaflet.css'
 import 'leaflet.markercluster'
 import 'leaflet.markercluster/dist/MarkerCluster.css'
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css'
-import { getLocalisations } from '@/services/api'
+import { getLocalisations, getAlerts } from '@/services/api'
 
-const map = ref(null)
-const markerGroup = ref(null)
 const filter = ref('all')
 const selectedArrondissement = ref('all')
+const selectedSource = ref('all')
+const dateMin = ref(null)
+const rayonLat = ref(null)
+const rayonLon = ref(null)
+const rayonKm = ref(null)
 const arrondissements = ref([])
 const visibleCount = ref(0)
+const alertes = ref([])
 
-const weatherCache = {}
+const isDarkMode = ref(document.body.classList.contains("dark-mode"))
+
+const observer = new MutationObserver(() => {
+  isDarkMode.value = document.body.classList.contains("dark-mode")
+})
+
+onMounted(() => {
+  observer.observe(document.body, { attributes: true, attributeFilter: ["class"] })
+})
+
+let map = null
+let markerGroup = null
 let allPoints = []
 
-function emojiTemp(temp) {
-  return temp !== '--' ? `${temp}°C` : 'N/A'
-}
-
-async function getWeather(lat, lon) {
-  const key = `${lat.toFixed(4)},${lon.toFixed(4)}`
-  if (weatherCache[key]) return weatherCache[key]
-
-  const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`)
-  const j = await res.json()
-  const w = j.current_weather || {}
-  const temp = w.temperature !== undefined ? w.temperature : '--'
-  weatherCache[key] = { temp }
-  return weatherCache[key]
-}
-
 function afficherPoints(points) {
-  markerGroup.value.clearLayers()
+  markerGroup.clearLayers()
   visibleCount.value = points.length
 
-  points.forEach(async p => {
+  points.forEach(p => {
     if (!p.latitude || !p.longitude) return
-
-    const w = await getWeather(p.latitude, p.longitude)
-    const emoji = emojiTemp(w.temp)
     const color = p.etat_annot === 'dirty' ? 'red' : 'green'
-
-    const html = `
-      <div style="text-align:center">
-        <svg height="14" width="14"><circle cx="7" cy="7" r="7" fill="${color}" /></svg>
-        <div style="font-size:11px">${emoji}</div>
-      </div>`
-
+    const html = `<div style="text-align:center">
+      <svg height="14" width="14"><circle cx="7" cy="7" r="7" fill="${color}" /></svg>
+    </div>`
     const marker = L.marker([p.latitude, p.longitude], {
       icon: L.divIcon({ html, className: '' })
     }).bindPopup(`
       <b>${p.fichier_nom}</b><br>
       État : ${p.etat_annot}<br>
-      Météo : ${emoji}
+      Ville : ${p.ville || 'non spécifiée'}<br>
+      Quartier : ${p.quartier || 'non spécifié'}<br>
+      Source : ${p.source || 'inconnue'}
     `)
-
-    markerGroup.value.addLayer(marker)
+    markerGroup.addLayer(marker)
   })
 }
 
 function appliquerFiltres() {
-  let filtrés = filter.value === 'all'
-    ? allPoints
-    : allPoints.filter(p => p.etat_annot === filter.value)
-
-  if (selectedArrondissement.value !== 'all') {
-    filtrés = filtrés.filter(p =>
-      (p.quartier || p.ville || '').toLowerCase() === selectedArrondissement.value.toLowerCase()
-    )
+  let filtrés = allPoints
+  if (filter.value !== 'all') filtrés = filtrés.filter(p => p.etat_annot === filter.value)
+  if (selectedArrondissement.value !== 'all' && selectedArrondissement.value.trim() !== '')
+    filtrés = filtrés.filter(p => (p.quartier || p.ville || '').toLowerCase() === selectedArrondissement.value.toLowerCase())
+  if (selectedSource.value !== 'all')
+    filtrés = filtrés.filter(p => (p.source || '').toLowerCase() === selectedSource.value)
+  if (dateMin.value)
+    filtrés = filtrés.filter(p => p.date_upload && new Date(p.date_upload) >= new Date(dateMin.value))
+  if (rayonLat.value && rayonLon.value && rayonKm.value) {
+    const R = 6371
+    filtrés = filtrés.filter(p => {
+      const dLat = (p.latitude - rayonLat.value) * Math.PI / 180
+      const dLon = (p.longitude - rayonLon.value) * Math.PI / 180
+      const a = Math.sin(dLat / 2) ** 2 +
+        Math.cos(p.latitude * Math.PI / 180) * Math.cos(rayonLat.value * Math.PI / 180) *
+        Math.sin(dLon / 2) ** 2
+      const d = 2 * R * Math.asin(Math.sqrt(a))
+      return d <= rayonKm.value
+    })
   }
-
   afficherPoints(filtrés)
+  verifierAlertes()
 }
 
-watch([filter, selectedArrondissement], appliquerFiltres)
+async function verifierAlertes() {
+  try {
+    const res = await getAlerts()
+    alertes.value = res.data.alertes || []
+  } catch (err) {
+    console.error("Erreur lors du chargement des alertes :", err)
+  }
+}
+
+watch([filter, selectedArrondissement, selectedSource, dateMin, rayonLat, rayonLon, rayonKm], appliquerFiltres)
 
 function recentrer() {
   if (!navigator.geolocation) return alert("Géolocalisation non supportée.")
   navigator.geolocation.getCurrentPosition(
-    pos => map.value.setView([pos.coords.latitude, pos.coords.longitude], 14),
+    pos => map.setView([pos.coords.latitude, pos.coords.longitude], 14),
     err => alert("Impossible d'obtenir votre position.")
   )
 }
 
 onMounted(async () => {
-  map.value = L.map('leaflet-map').setView([48.8566, 2.3522], 12)
-
+  map = L.map('leaflet-map').setView([48.8566, 2.3522], 12)
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors'
-  }).addTo(map.value)
-
-  markerGroup.value = L.markerClusterGroup()
-  map.value.addLayer(markerGroup.value)
-
+  }).addTo(map)
+  markerGroup = L.markerClusterGroup()
+  map.addLayer(markerGroup)
   const response = await getLocalisations()
   allPoints = response.data
-
-  // Extraire les arrondissements uniques
-  const raw = response.data.map(p => p.quartier || p.ville || '').filter(Boolean)
+  const raw = allPoints.map(p => p.quartier || p.ville || '').filter(Boolean)
   arrondissements.value = [...new Set(raw)].sort()
-
   appliquerFiltres()
 })
 </script>
@@ -154,12 +186,65 @@ onMounted(async () => {
 }
 
 .sidebar {
-  width: 200px;
-  background: #f2f2f2;
+  width: 220px;
   padding: 20px;
   border-radius: 10px;
   flex-shrink: 0;
-  box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+  border: 1px solid #ddd;
+}
+
+.sidebar-light {
+  background-color: #ffffff;
+  color: #000000;
+}
+
+.sidebar-light input,
+.sidebar-light select {
+  background-color: #ffffff;
+  color: #000000;
+  border: 1px solid #ccc;
+}
+
+.sidebar-light button {
+  background-color: #f5f5f5;
+  color: #000000;
+  border: 1px solid #bbb;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.sidebar-dark {
+  background-color: #121212;
+  color: #eeeeee;
+  border: 1px solid #2a2a2a;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+.sidebar-dark input,
+.sidebar-dark select {
+  background-color: #1e1e1e;
+  color: #f5f5f5;
+  border: 1px solid #444;
+  padding: 6px 10px;
+  border-radius: 6px;
+}
+
+.sidebar-dark input::placeholder {
+  color: #888;
+}
+
+.sidebar-dark button {
+  background-color: #2b2b2b;
+  color: #fff;
+  border: 1px solid #555;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.sidebar-dark button:hover {
+  background-color: #3a3a3a;
 }
 
 .map-container {
@@ -205,5 +290,16 @@ onMounted(async () => {
   margin-top: 5px;
   font-size: 14px;
   color: #333;
+}
+
+.alert-box {
+  background: #ffe0e0;
+  color: #900;
+  padding: 12px;
+  border-radius: 10px;
+  margin-top: 10px;
+  text-align: left;
+  max-width: 400px;
+  margin-inline: auto;
 }
 </style>
