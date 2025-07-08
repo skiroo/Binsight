@@ -528,7 +528,6 @@ body.dark-theme {
 }
 
 .alert-list {
-  background: #fff3f3;
   border: 1px solid #e53e3e;
   padding: 12px;
   margin-top: 10px;

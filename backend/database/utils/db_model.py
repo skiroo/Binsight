@@ -12,7 +12,6 @@ class Utilisateur(db.Model):
     mot_de_passe = db.Column(db.Text, nullable=False)
     role = db.Column(db.Text, nullable=False)  # citoyen / agent / admin
     date_creation = db.Column(db.DateTime, default=datetime.utcnow)
-    avatar_url = db.Column(db.Text)
 
 # === Table des images ===
 class Image(db.Model):
