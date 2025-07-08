@@ -10,11 +10,12 @@
     />
 
     <LoginRegisterModal
-      v-if="showModal"
-      :isDark="isDark"
-      @close="showModal = false"
-      @user-connected="handleUserConnected"
-    />
+  v-if="showModal"
+  :isDark="isDark"
+  :lang="lang"
+  @close="showModal = false"
+  @user-connected="handleUserConnected"
+/>
 
     <main class="flex-grow">
       <RouterView :lang="lang" />

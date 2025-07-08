@@ -1,67 +1,73 @@
 <template>
-    <div class="modal-overlay">
-        <div class="modal-content" :class="isDark ? 'dark' : 'light'">
-            <button class="close-button" @click="$emit('close')">✕</button>
+  <div class="modal-overlay">
+    <div class="modal-content" :class="isDark ? 'dark' : 'light'">
+      <button class="close-button" @click="$emit('close')">✕</button>
 
-            <component
-                :is="currentForm"
-                @switch-mode="toggleMode"
-                @switchToLogin="switchToLogin"
-                @login-success="handleLoginSuccess"
-                :message="postRegisterMessage"
-            />
+      <component
+        :is="currentForm"
+        @switch-mode="toggleMode"
+        @switchToLogin="switchToLogin"
+        @login-success="handleLoginSuccess"
+        :message="postRegisterMessage"
+        :lang="lang"
+      />
 
-            <div class="switch-mode">
-                <span>
-                {{ currentForm === 'LoginForm' ? "Pas encore inscrit ?" : "Déjà un compte ?" }}
-                </span>
-                <button @click="toggleMode">
-                {{ currentForm === 'LoginForm' ? "S’inscrire" : "Se connecter" }}
-                </button>
-            </div>
-        </div>
+      <div class="switch-mode">
+        <span>
+          {{
+            t(currentForm === 'LoginForm' ? 'Pas encore inscrit ?' : 'Déjà un compte ?', currentForm === 'LoginForm' ? 'Not registered yet?' : 'Already have an account?')
+          }}
+        </span>
+        <button @click="toggleMode">
+          {{
+            t(currentForm === 'LoginForm' ? 'S’inscrire' : 'Se connecter', currentForm === 'LoginForm' ? 'Sign up' : 'Log in')
+          }}
+        </button>
+      </div>
     </div>
+  </div>
 </template>
 
 <script>
-    import LoginForm from "./LoginForm.vue";
-    import RegisterForm from "./RegisterForm.vue";
+import LoginForm from "./LoginForm.vue";
+import RegisterForm from "./RegisterForm.vue";
 
-    export default {
-        props: {
-            isDark: Boolean,
-        },
-        components: {
-            LoginForm,
-            RegisterForm,
-        },
-        data() {
-            return {
-            currentForm: "LoginForm",
-            postRegisterMessage: ""
-            };
-        },
-        methods: {
-            toggleMode() {
-                this.currentForm =
-                this.currentForm === "LoginForm" ? "RegisterForm" : "LoginForm";
-                this.postRegisterMessage = "";
-            },
-            switchToLogin(message) {
-                this.postRegisterMessage = message || "";
-                this.currentForm = "LoginForm";
-            },
-            handleLoginSuccess(user) {
-                this.$emit('user-connected', user);
-                this.$emit('close');
-            }
-        }
+export default {
+  props: {
+    isDark: Boolean,
+    lang: String
+  },
+  components: {
+    LoginForm,
+    RegisterForm
+  },
+  data() {
+    return {
+      currentForm: "LoginForm",
+      postRegisterMessage: ""
     };
+  },
+  methods: {
+    t(fr, en) {
+      return this.lang === "fr" ? fr : en;
+    },
+    toggleMode() {
+      this.currentForm = this.currentForm === "LoginForm" ? "RegisterForm" : "LoginForm";
+      this.postRegisterMessage = "";
+    },
+    switchToLogin(message) {
+      this.postRegisterMessage = message || "";
+      this.currentForm = "LoginForm";
+    },
+    handleLoginSuccess(user) {
+      this.$emit("user-connected", user);
+      this.$emit("close");
+    }
+  }
+};
 </script>
 
-
 <style>
-/* Overlay */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -75,7 +81,6 @@
   z-index: 1000;
 }
 
-/* Container */
 .modal-content {
   padding: 30px;
   border-radius: 20px;
@@ -90,11 +95,10 @@
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Light & dark variables */
 .modal-content.light {
   background-color: #ffffff;
-  color: #1a1a1a;
-  --input-bg: #f4f4f4;
+  color: #000000;
+  --input-bg: #ffffff;
   --input-text: #1a1a1a;
 }
 
@@ -105,7 +109,6 @@
   --input-text: #ffffff;
 }
 
-/* Close button */
 .close-button {
   position: absolute;
   top: 12px;
@@ -117,7 +120,6 @@
   cursor: pointer;
 }
 
-/* Form style inside child components */
 form {
   display: flex;
   flex-direction: column;
@@ -147,7 +149,6 @@ form input:focus {
   box-shadow: 0 0 0 2px rgba(129, 199, 132, 0.3);
 }
 
-
 form button {
   padding: 12px;
   background-color: #10b981;
@@ -164,7 +165,6 @@ form button:hover {
   background-color: #10b981;
 }
 
-/* Switch mode */
 .switch-mode {
   font-size: 0.95rem;
   display: flex;

@@ -1,13 +1,24 @@
+// LoginForm.vue
 <template>
   <div class="login-form">
-    <h2>Connexion</h2>
+    <h2>{{ t('Connexion', 'Login') }}</h2>
 
     <form @submit.prevent="handleLogin">
-      <input v-model="email" type="email" placeholder="Email" required />
-      <input v-model="mot_de_passe" type="password" placeholder="Mot de passe" required />
+      <input
+        v-model="email"
+        type="email"
+        :placeholder="t('Email', 'Email')"
+        required
+      />
+      <input
+        v-model="mot_de_passe"
+        type="password"
+        :placeholder="t('Mot de passe', 'Password')"
+        required
+      />
 
       <button type="submit" :disabled="loading">
-        {{ loading ? 'Connexion...' : 'Se connecter' }}
+        {{ loading ? t('Connexion...', 'Logging in...') : t('Se connecter', 'Login') }}
       </button>
 
       <p v-if="error" class="error-message">{{ error }}</p>
@@ -20,6 +31,10 @@ import { login } from '../services/api';
 
 export default {
   props: {
+    lang: {
+      type: String,
+      default: 'fr'
+    },
     message: {
       type: String,
       default: ''
@@ -34,20 +49,20 @@ export default {
     };
   },
   methods: {
+    t(fr, en) {
+      return this.lang === 'fr' ? fr : en;
+    },
     async handleLogin() {
       this.error = '';
       this.loading = true;
 
       try {
         const res = await login(this.email, this.mot_de_passe);
-
-        // Enregistrer l'utilisateur dans localStorage
         localStorage.setItem('user', JSON.stringify(res.data));
-
-        // Émettre l'événement au parent
         this.$emit('login-success', res.data);
       } catch (err) {
-        this.error = err.response?.data?.error || 'Erreur de connexion.';
+        const msg = err.response?.data?.error || this.t('Erreur de connexion.', 'Login error.');
+        this.error = msg;
       } finally {
         this.loading = false;
       }
