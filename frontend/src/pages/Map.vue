@@ -60,10 +60,26 @@
 
       <button @click="recentrer">📍 {{ lang === 'fr' ? 'Ma position' : 'My position' }}</button>
 
-        <!-- Réinitialiser tous -->
-        <button class="reset-button" @click="resetAllFilters" style="margin-top: 10px; font-weight: bold;">
-            {{ lang === 'fr' ? 'Réinitialiser tous les filtres' : 'Reset all filters' }}
-        </button>
+      <!-- Boutons alertes -->
+      <button
+        :class="{ active: showOnlyAlerts }"
+        @click="toggleShowOnlyAlerts"
+        style="margin-top: 10px;"
+      >
+        {{ lang === 'fr' ? 'Afficher uniquement les alertes' : 'Show only alerts' }}
+      </button>
+
+      <button
+        @click="toggleShowAlertList"
+        style="margin-top: 10px;"
+      >
+        {{ lang === 'fr' ? 'Afficher la liste des alertes' : 'Show alerts list' }}
+      </button>
+
+      <!-- Réinitialiser tous -->
+      <button class="reset-button" @click="resetAllFilters" style="margin-top: 10px; font-weight: bold;">
+        {{ lang === 'fr' ? 'Réinitialiser tous les filtres' : 'Reset all filters' }}
+      </button>
     </div>
 
     <!-- Carte -->
@@ -76,7 +92,8 @@
         <div><span class="legend-dot clean"></span> {{ lang === 'fr' ? 'Vide' : 'Empty' }}</div>
       </div>
 
-      <div v-if="alertes.length > 0" class="alert-box">
+      <!-- Liste des alertes -->
+      <div v-if="showAlertList && alertes.length > 0" class="alert-list">
         <h3>🚨 {{ lang === 'fr' ? 'Zones en alerte :' : 'Alert zones:' }}</h3>
         <ul>
           <li v-for="a in alertes" :key="a.quartier">
@@ -99,7 +116,7 @@ import { getLocalisations, getAlerts } from '@/services/api'
 
 const props = defineProps({ isDark: Boolean, lang: String })
 
-// Reactive states
+// États réactifs
 const filter = ref('all')
 const selectedSource = ref('all')
 const selectedArrondissementInput = ref('')
@@ -115,12 +132,15 @@ const showSuggestions = ref(false)
 const visibleCount = ref(0)
 const alertes = ref([])
 
-// Map and markers
+const showOnlyAlerts = ref(false)    // Afficher uniquement les alertes sur la carte
+const showAlertList = ref(false)     // Afficher la liste des alertes en dessous de la carte
+
+// Variables Leaflet
 let map = null
 let markerGroup = null
 let allPoints = []
-let rayonCircle = null
 
+// Affiche les marqueurs sur la carte selon les points donnés
 function afficherPoints(points) {
   markerGroup.clearLayers()
   visibleCount.value = points.length
@@ -138,16 +158,13 @@ function afficherPoints(points) {
     const popupContent = `
       <b>${p.fichier_nom}</b><br>
       État : ${p.etat_annot}<br>
-      Ville : ${p.ville || 'non spécifiée'}<br>
-      Quartier : ${p.quartier || 'non spécifié'}<br>
-      Source : ${p.source || 'inconnue'}`
+      Ville : ${p.ville || (props.lang === 'fr' ? 'non spécifiée' : 'not specified')}<br>
+      Quartier : ${p.quartier || (props.lang === 'fr' ? 'non spécifié' : 'not specified')}<br>
+      Source : ${p.source || (props.lang === 'fr' ? 'inconnue' : 'unknown')}`
 
     marker.bindPopup(popupContent)
 
     marker.on('click', (e) => {
-      rayonLat.value = p.latitude
-      rayonLon.value = p.longitude
-      updateRayonCircle()
       L.popup().setLatLng(e.latlng).setContent(popupContent).openOn(map)
       appliquerFiltres()
     })
@@ -156,46 +173,50 @@ function afficherPoints(points) {
   })
 }
 
+// Applique les filtres sur les points et selon l’état showOnlyAlerts
 function appliquerFiltres() {
   let filtrés = allPoints
-  if (filter.value !== 'all') filtrés = filtrés.filter(p => p.etat_annot === filter.value)
 
-  const arrInput = selectedArrondissementInput.value.trim().toLowerCase()
-  if (arrInput) filtrés = filtrés.filter(p => (p.quartier || p.ville || '').toLowerCase().includes(arrInput))
-
-  if (selectedSource.value !== 'all') filtrés = filtrés.filter(p => (p.source || '').toLowerCase() === selectedSource.value)
-  if (dateMin.value) filtrés = filtrés.filter(p => p.date_upload && new Date(p.date_upload) >= new Date(dateMin.value))
-  if (dateMax.value) filtrés = filtrés.filter(p => p.date_upload && new Date(p.date_upload) <= new Date(dateMax.value))
-
-  if (rayonLat.value && rayonLon.value && rayonKm.value) {
-    const R = 6371
-    filtrés = filtrés.filter(p => {
-      const dLat = (p.latitude - rayonLat.value) * Math.PI / 180
-      const dLon = (p.longitude - rayonLon.value) * Math.PI / 180
-      const a = Math.sin(dLat / 2) ** 2 +
-                Math.cos(p.latitude * Math.PI / 180) * Math.cos(rayonLat.value * Math.PI / 180) *
-                Math.sin(dLon / 2) ** 2
-      const d = 2 * R * Math.asin(Math.sqrt(a))
-      return d <= rayonKm.value
-    })
+  if (showOnlyAlerts.value) {
+    const alertQuartiers = alertes.value.map(a => a.quartier.toLowerCase())
+    filtrés = filtrés.filter(p => p.etat_annot === 'dirty' && alertQuartiers.includes((p.quartier || '').toLowerCase()))
+  } else {
+    if (filter.value !== 'all') filtrés = filtrés.filter(p => p.etat_annot === filter.value)
+    const arrInput = selectedArrondissementInput.value.trim().toLowerCase()
+    if (arrInput) filtrés = filtrés.filter(p => (p.quartier || p.ville || '').toLowerCase().includes(arrInput))
+    if (selectedSource.value !== 'all') filtrés = filtrés.filter(p => (p.source || '').toLowerCase() === selectedSource.value)
+    if (dateMin.value) filtrés = filtrés.filter(p => p.date_upload && new Date(p.date_upload) >= new Date(dateMin.value))
+    if (dateMax.value) filtrés = filtrés.filter(p => p.date_upload && new Date(p.date_upload) <= new Date(dateMax.value))
+    if (rayonLat.value && rayonLon.value && rayonKm.value) {
+      const R = 6371
+      filtrés = filtrés.filter(p => {
+        const dLat = (p.latitude - rayonLat.value) * Math.PI / 180
+        const dLon = (p.longitude - rayonLon.value) * Math.PI / 180
+        const a = Math.sin(dLat / 2) ** 2 +
+                  Math.cos(p.latitude * Math.PI / 180) * Math.cos(rayonLat.value * Math.PI / 180) *
+                  Math.sin(dLon / 2) ** 2
+        const d = 2 * R * Math.asin(Math.sqrt(a))
+        return d <= rayonKm.value
+      })
+    }
   }
 
   afficherPoints(filtrés)
   verifierAlertes()
 }
 
-function updateRayonCircle() {
-  if (rayonLat.value && rayonLon.value && rayonKm.value) {
-    if (rayonCircle) map.removeLayer(rayonCircle)
-    rayonCircle = L.circle([rayonLat.value, rayonLon.value], {
-      radius: rayonKm.value * 1000,
-      color: '#10b981',
-      weight: 2,
-      fillOpacity: 0.1
-    }).addTo(map)
-  }
+// Bascule affichage uniquement alertes sur la carte
+function toggleShowOnlyAlerts() {
+  showOnlyAlerts.value = !showOnlyAlerts.value
+  appliquerFiltres()
 }
 
+// Bascule affichage liste des alertes sous la carte
+function toggleShowAlertList() {
+  showAlertList.value = !showAlertList.value
+}
+
+// Fonctions date rapide
 function setDateRange(type) {
   const today = new Date()
   const past = new Date()
@@ -220,7 +241,6 @@ function resetDateFilters() {
 
 function resetCoordFilters() {
   rayonLat.value = rayonLon.value = rayonKm.value = null
-  if (rayonCircle) map.removeLayer(rayonCircle)
   appliquerFiltres()
 }
 
@@ -252,15 +272,17 @@ function resetDistrict() {
 function setFilter(val) { filter.value = val }
 function setSource(val) { selectedSource.value = val }
 
+// Récupère les alertes côté API
 async function verifierAlertes() {
   try {
-    const res = await getAlerts()
+    const res = await getAlerts('all')
     alertes.value = res.data.alertes || []
   } catch (err) {
     console.error("Erreur lors du chargement des alertes :", err)
   }
 }
 
+// Réinitialise tous les filtres
 function resetAllFilters() {
   filter.value = 'all'
   selectedSource.value = 'all'
@@ -271,24 +293,14 @@ function resetAllFilters() {
   rayonLat.value = null
   rayonLon.value = null
   rayonKm.value = null
-  if (rayonCircle) map.removeLayer(rayonCircle)
   appliquerFiltres()
 }
 
+// Réactivité des filtres
 watch([
   filter, selectedSource, selectedArrondissementInput,
   dateMin, dateMax, rayonLat, rayonLon, rayonKm
 ], appliquerFiltres)
-
-watch(rayonKm, updateRayonCircle)
-
-function recentrer() {
-  if (!navigator.geolocation) return alert("Géolocalisation non supportée.")
-  navigator.geolocation.getCurrentPosition(
-    pos => map.setView([pos.coords.latitude, pos.coords.longitude], 14),
-    () => alert("Impossible d'obtenir votre position.")
-  )
-}
 
 onMounted(async () => {
   map = L.map('leaflet-map').setView([48.8566, 2.3522], 12)
@@ -305,6 +317,7 @@ onMounted(async () => {
   const raw = allPoints.map(p => p.quartier || p.ville || '').filter(Boolean)
   arrondissements.value = [...new Set(raw)].sort()
 
+  verifierAlertes()
   appliquerFiltres()
 })
 </script>
@@ -514,4 +527,19 @@ body.dark-theme {
   --accent-color: #10b981;
 }
 
+.alert-list {
+  background: #fff3f3;
+  border: 1px solid #e53e3e;
+  padding: 12px;
+  margin-top: 10px;
+  max-width: 400px;
+  margin-inline: auto;
+  border-radius: 10px;
+  color: #900;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.95rem;
+  max-height: 300px;
+  overflow-y: auto;
+}
 </style>

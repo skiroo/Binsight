@@ -458,7 +458,7 @@ def get_alerts():
     seuil = 5
     alerts = []
 
-    periode = request.args.get('periode', 'day')
+    periode = request.args.get('periode', 'all')  # <-- par défaut 'all' pour tout prendre
     date_min = request.args.get('date_min')
     date_max = request.args.get('date_max')
 
@@ -488,6 +488,9 @@ def get_alerts():
             ))
         except ValueError:
             return jsonify({'alertes': [], 'seuil': seuil})
+    elif periode == 'all':
+        # Pas de filtre date, on prend tout
+        pass
 
     results = query.group_by(Localisation.quartier).all()
 
