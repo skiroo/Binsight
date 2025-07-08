@@ -2,11 +2,13 @@
   <div class="upload-container">
     <h2>{{ lang === 'fr' ? "Téléversement d'une image" : "Upload an image" }}</h2>
 
-    <label for="groupe">Groupe de règles :</label>
+    <label for="groupe">
+  {{ lang === 'fr' ? 'Groupe de règles :' : 'Rule group:' }}
+</label>
     <select v-model="selectedGroupe" required>
       <option v-for="g in groupes" :key="g.id" :value="g.id">
-        {{ g.nom }}
-      </option>
+    {{ lang === 'fr' ? g.nom_fr || g.nom : g.nom_en || g.nom }}
+  </option>
     </select>
 
     <input type="file" @change="handleImageUpload" accept="image/*" />
