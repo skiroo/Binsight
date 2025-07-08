@@ -14,11 +14,23 @@ export const register = (data) =>
 export const getLocalisations = () =>
     API.get('/api/localisations');
 
-export const getStats = (periode = 'day') =>
-  API.get(`/stats?periode=${periode}`).then(res => res.data);
+export const getTodayLocalisations = () =>
+    API.get('/api/localisations/today');
 
-export async function getAlerts() {
-  return await axios.get('/api/alerts')
+export const getStats = (startOrPeriod, end = null) => {
+  if (end) {
+    return API.get(`/api/stats?periode=custom&date_min=${startOrPeriod}&date_max=${end}`).then(res => res.data);
+  } else {
+    return API.get(`/api/stats?periode=${startOrPeriod}`).then(res => res.data);
+  }
+};
+
+export async function getAlerts(periode = 'day', start = null, end = null) {
+  let url = `/api/alerts?periode=${periode}`;
+  if (periode === 'custom' && start && end) {
+    url += `&date_min=${start}&date_max=${end}`;
+  }
+  return await API.get(url);
 }
 
 export default API;

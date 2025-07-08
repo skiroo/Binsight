@@ -1,13 +1,14 @@
 from flask import Blueprint, request, jsonify
 from PIL import Image as PILImage
 from werkzeug.utils import secure_filename
-from datetime import datetime
+from sqlalchemy import and_
+from datetime import datetime, timedelta
 import requests
 import os
 
 from app.utils.rules import appliquer_regles_sur_image
 from app.extensions import bcrypt
-from database.utils.db_model import db, Image, RegleClassification, CaracteristiquesImage, Utilisateur, Localisation
+from database.utils.db_model import db, Image, RegleClassification, GroupeRegles, CaracteristiquesImage, Utilisateur, Localisation
 from database.utils.db_insert import traiter_image
 
 routes = Blueprint('routes', __name__)
@@ -193,12 +194,38 @@ def annotate_image(image_id):
     return jsonify({'message': f"Annotation enregistrée : {etat}"}), 200
 
 
-@routes.route('/stats', methods=['GET'])
+@routes.route('/api/stats', methods=['GET'])
 def stats():
-    total = Image.query.count()
-    pleines = Image.query.filter_by(classification_auto='dirty').count()
-    vides = Image.query.filter_by(classification_auto='clean').count()
-    non_annotees = Image.query.filter(Image.etat_annot == None).count()
+    periode = request.args.get('periode', 'day')  # 'day', 'week', 'month' ou 'custom'
+    date_min = request.args.get('date_min')
+    date_max = request.args.get('date_max')
+
+    query = Image.query
+
+    if periode == 'day':
+        today = datetime.today().date()
+        query = query.filter(db.func.date(Image.date_upload) == today)
+    elif periode == 'week':
+        week_ago = datetime.today().date() - timedelta(days=6)
+        query = query.filter(db.func.date(Image.date_upload) >= week_ago)
+    elif periode == 'month':
+        month_ago = datetime.today().date() - timedelta(days=29)
+        query = query.filter(db.func.date(Image.date_upload) >= month_ago)
+    elif periode == 'custom' and date_min and date_max:
+        try:
+            dmin = datetime.strptime(date_min, '%Y-%m-%d').date()
+            dmax = datetime.strptime(date_max, '%Y-%m-%d').date()
+            query = query.filter(and_(
+                db.func.date(Image.date_upload) >= dmin,
+                db.func.date(Image.date_upload) <= dmax
+            ))
+        except ValueError:
+            return jsonify({'error': 'Format de date invalide (attendu YYYY-MM-DD)'}), 400
+
+    total = query.count()
+    pleines = query.filter_by(classification_auto='dirty').count()
+    vides = query.filter_by(classification_auto='clean').count()
+    non_annotees = query.filter(Image.etat_annot == None).count()
 
     return jsonify({
         'total_images': total,
@@ -271,6 +298,20 @@ def delete_rule(rule_id):
     db.session.delete(rule)
     db.session.commit()
     return jsonify({'message': 'Règle supprimée'})
+
+
+@routes.route('/api/rule-groups', methods=['GET'])
+def get_rule_groups():
+    groupes = GroupeRegles.query.all()
+    return jsonify([
+        {
+            'id': g.id,
+            'nom': g.nom,
+            'description': g.description,
+            'nb_regles': len(g.regles)
+        }
+        for g in groupes
+    ])
 
 
 @routes.route('/images', methods=['GET'])
@@ -370,6 +411,32 @@ def get_all_localisations():
     return jsonify(result)
 
 
+@routes.route('/api/localisations/today', methods=['GET'])
+def get_today_localisations():
+    today = datetime.today().date()
+    localisations = Localisation.query.join(Image).filter(
+        db.func.date(Image.date_upload) == today
+    ).all()
+
+    result = []
+
+    for loc in localisations:
+        if loc.latitude and loc.longitude:
+            result.append({
+                'latitude': loc.latitude,
+                'longitude': loc.longitude,
+                'etat_annot': loc.image.etat_annot,
+                'fichier_nom': loc.image.fichier_nom,
+                'ville': loc.ville,
+                'quartier': loc.quartier,
+                'id': loc.image_id,
+                'date_upload': loc.image.date_upload.isoformat(),
+                'source': loc.image.source,
+            })
+
+    return jsonify(result)
+
+
 def get_arrondissement_from_coords(lat, lon):
     try:
         url = f"https://nominatim.openstreetmap.org/reverse?lat={lat}&lon={lon}&format=json&addressdetails=1"
@@ -384,16 +451,41 @@ def get_arrondissement_from_coords(lat, lon):
         print("Erreur géocodage :", e)
     return None
 
+
+@routes.route('/api/alerts', methods=['GET'])
 def get_alerts():
-    seuil = 10  # Seuil critique à partir duquel on alerte
+    seuil = 5
     alerts = []
 
-    # Compter les poubelles "dirty" par quartier
-    results = db.session.query(
-        Localisation.quartier,
-        db.func.count(Image.id)
-    ).join(Image).filter(Image.etat_annot == 'dirty')\
-     .group_by(Localisation.quartier).all()
+    periode = request.args.get('periode', 'day')
+    date_min = request.args.get('date_min')
+    date_max = request.args.get('date_max')
+
+    query = db.session.query(Localisation.quartier, db.func.count(Image.id)) \
+        .join(Image) \
+        .filter(Image.etat_annot == 'dirty')
+
+    if periode == 'day':
+        today = datetime.today().date()
+        query = query.filter(db.func.date(Image.date_upload) == today)
+    elif periode == 'week':
+        week_ago = datetime.today().date() - timedelta(days=6)
+        query = query.filter(db.func.date(Image.date_upload) >= week_ago)
+    elif periode == 'month':
+        month_ago = datetime.today().date() - timedelta(days=29)
+        query = query.filter(db.func.date(Image.date_upload) >= month_ago)
+    elif periode == 'custom' and date_min and date_max:
+        try:
+            dmin = datetime.strptime(date_min, '%Y-%m-%d').date()
+            dmax = datetime.strptime(date_max, '%Y-%m-%d').date()
+            query = query.filter(and_(
+                db.func.date(Image.date_upload) >= dmin,
+                db.func.date(Image.date_upload) <= dmax
+            ))
+        except ValueError:
+            return jsonify({'alertes': [], 'seuil': seuil})
+
+    results = query.group_by(Localisation.quartier).all()
 
     for quartier, count in results:
         if quartier and count >= seuil:

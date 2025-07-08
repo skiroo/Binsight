@@ -55,16 +55,15 @@ class RegleClassification(db.Model):
     description_rc = db.Column(db.Text)
     condition_rc = db.Column(db.Text, nullable=False)  # Ex: "moyenne_rouge < 100 AND taille_ko > 2000"
     active = db.Column(db.Boolean, default=True)
+    groupe_id = db.Column(db.Integer, db.ForeignKey('groupes_regles.id'))
 
-# === Table des statistiques globales ===
-class Statistique(db.Model):
-    __tablename__ = 'statistiques'
+class GroupeRegles(db.Model):
+    __tablename__ = 'groupes_regles'
     id = db.Column(db.Integer, primary_key=True)
-    date = db.Column(db.Date, nullable=False)
-    nb_images = db.Column(db.Integer)
-    nb_vides = db.Column(db.Integer)
-    nb_pleines = db.Column(db.Integer)
-    localisation = db.Column(db.Text)
+    nom = db.Column(db.Text, nullable=False)
+    description = db.Column(db.Text)
+
+    regles = db.relationship('RegleClassification', backref='groupe', lazy=True)
 
 # === Table de localisation ===
 class Localisation(db.Model):

@@ -21,22 +21,30 @@ def update_localisation_quartiers():
     with app.app_context():
         localisations = Localisation.query.filter(
             Localisation.latitude.isnot(None),
-            Localisation.longitude.isnot(None),
-            (Localisation.quartier.is_(None) | (Localisation.quartier == ''))
+            Localisation.longitude.isnot(None)
         ).all()
 
-        print(f"🔍 {len(localisations)} localisations à mettre à jour...")
+        print(f"🔍 {len(localisations)} localisations à vérifier...")
 
         for loc in localisations:
             arrondissement = get_arrondissement(loc.latitude, loc.longitude)
-            if arrondissement:
-                loc.quartier = arrondissement
-                db.session.commit()
-                print(f"✅ image_id={loc.image_id} → quartier='{arrondissement}'")
-            else:
-                print(f"⚠️ image_id={loc.image_id} : arrondissement non trouvé")
+            updated = False
 
-            time.sleep(1)  # Respect des règles Nominatim (1 req/sec max)
+            if arrondissement and loc.quartier != arrondissement:
+                loc.quartier = arrondissement
+                updated = True
+
+            if not loc.ville or loc.ville.strip() == "":
+                loc.ville = "Paris"
+                updated = True
+
+            if updated:
+                db.session.commit()
+                print(f"✅ image_id={loc.image_id} → quartier='{loc.quartier}' | ville='{loc.ville}'")
+            else:
+                print(f"⏭️ image_id={loc.image_id} déjà à jour")
+
+            time.sleep(1)  # Respect Nominatim : 1 requête/sec
 
 if __name__ == "__main__":
     update_localisation_quartiers()

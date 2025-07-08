@@ -8,7 +8,6 @@ from app.extensions import bcrypt
 from app.routes import routes
 from app.auth_routes import auth_routes
 
-from app.alert_routes import alert_bp  # tu dois avoir ce fichier pour les alertes
 
 def create_app():
     load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', 'database', '.env'))
@@ -25,7 +24,6 @@ def create_app():
     # Enregistrement des routes
     app.register_blueprint(routes)
     app.register_blueprint(auth_routes)
-    app.register_blueprint(alert_bp)  # ← ici c’est maintenant bien placé
 
     with app.app_context():
         db.create_all()
