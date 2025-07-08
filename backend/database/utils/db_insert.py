@@ -84,7 +84,7 @@ def ajouter_localisation(image_id, longitude, latitude, numero_rue, nom_rue, vil
     return loc
 
 # === Traitement complet d'une image ===
-def traiter_image(image_path, utilisateur_id=1, source='citoyen'):
+def traiter_image(image_path, utilisateur_id=1, source='citoyen', groupe_id=None):
     # 1. Extraire les caractéristiques
     features = extraire_caracteristiques(image_path)
 
@@ -95,7 +95,7 @@ def traiter_image(image_path, utilisateur_id=1, source='citoyen'):
     enregistrer_caracteristiques(image.id, features)
 
     # 4. Appliquer les règles présentes en base
-    label, msg = appliquer_regles_sur_image(image.id)
+    label, msg = appliquer_regles_sur_image(image.id, groupe_id=groupe_id)
 
     return image.id, label, msg
 

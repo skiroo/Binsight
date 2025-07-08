@@ -45,7 +45,8 @@ def init_regles():
                     nom_regle=r["nom"],
                     condition_rc=r["condition"],
                     description_rc=r["description"],
-                    active=True
+                    active=True,
+                    groupe_id=1  # <-- ici on ajoute le groupe
                 )
                 db.session.add(regle)
                 print(f"✅ Ajout : {r['nom']} → {r['condition']}")

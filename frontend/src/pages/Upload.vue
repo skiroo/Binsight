@@ -2,9 +2,16 @@
   <div class="upload-container">
     <h2>{{ lang === 'fr' ? "Téléversement d'une image" : "Upload an image" }}</h2>
 
+    <label for="groupe">Groupe de règles :</label>
+    <select v-model="selectedGroupe" required>
+      <option v-for="g in groupes" :key="g.id" :value="g.id">
+        {{ g.nom }}
+      </option>
+    </select>
+
     <input type="file" @change="handleImageUpload" accept="image/*" />
     <div :class="['camera-toggle', { active: cameraActive }]" @click="toggleCamera">
-        <img src="@/assets/camera.png" alt="Camera" />
+      <img src="@/assets/camera.png" alt="Camera" />
     </div>
 
     <video ref="video" autoplay playsinline style="display:none; width: 100%; margin-top: 10px;"></video>
@@ -23,7 +30,16 @@
     </div>
 
     <div v-if="etat && !loading">
-      <p><strong>{{ lang === 'fr' ? "État" : "Status" }} :</strong> {{ etat === 'dirty' ? (lang === 'fr' ? 'Pleine' : 'Full') : etat === 'clean' ? (lang === 'fr' ? 'Vide' : 'Empty') : (lang === 'fr' ? 'Non défini' : 'Undefined') }}</p>
+      <p>
+        <strong>{{ lang === 'fr' ? "État" : "Status" }} :</strong>
+        {{
+          etat === 'dirty'
+            ? lang === 'fr' ? 'Pleine' : 'Full'
+            : etat === 'clean'
+            ? lang === 'fr' ? 'Vide' : 'Empty'
+            : lang === 'fr' ? 'Non défini' : 'Undefined'
+        }}
+      </p>
     </div>
 
     <div v-if="imageId && !loading">
@@ -32,7 +48,11 @@
     </div>
 
     <h3>{{ lang === 'fr' ? "Adresse" : "Address" }}</h3>
-    <input v-model="adresseComplete" :placeholder="lang === 'fr' ? 'Ex : 15 rue de Paris, 75000 Paris' : 'E.g. 15 rue de Paris, 75000 Paris'" @input="fetchAddressSuggestions" />
+    <input
+      v-model="adresseComplete"
+      :placeholder="lang === 'fr' ? 'Ex : 15 rue de Paris, 75000 Paris' : 'E.g. 15 rue de Paris, 75000 Paris'"
+      @input="fetchAddressSuggestions"
+    />
     <ul v-if="suggestions.length" class="suggestions">
       <li v-for="(sug, index) in suggestions" :key="index" @click="applySuggestion(sug)">
         {{ sug.label }}
@@ -53,11 +73,14 @@
 <script>
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import API from '@/services/api';  // Assure-toi que ton API est configuré ici
 
 export default {
   props: ['lang'],
   data() {
     return {
+      groupes: [],
+      selectedGroupe: null,
       image: null,
       imageId: null,
       imagePreview: null,
@@ -82,93 +105,108 @@ export default {
     };
   },
   mounted() {
+    this.loadRuleGroups();
     this.initMap();
     this.getLocation();
   },
   methods: {
-
+    async loadRuleGroups() {
+      try {
+        const res = await API.get('/api/rule-groups');
+        this.groupes = res.data;
+        // Sélection automatique du groupe id=1 ou premier groupe dispo
+        const defaultGroup = this.groupes.find(g => g.id === 1) || this.groupes[0];
+        if (defaultGroup) {
+          this.selectedGroupe = defaultGroup.id;
+        }
+      } catch (e) {
+        console.error('Erreur chargement groupes de règles', e);
+      }
+    },
     handleImageUpload(e) {
       const file = e.target.files[0];
       if (!file) return;
       this.processImage(file);
     },
-
     async processImage(file) {
-        this.message = '';
+      this.message = '';
 
-        // Supprime l’image précédente si elle existait
-        if (this.imageId) {
-            try {
-                await fetch(`http://localhost:5000/delete_temp/${this.imageId}`, {
-                    method: 'DELETE'
-                });
-            } catch (err) {
-                console.error('Erreur suppression image précédente :', err);
-            }
+      if (this.imageId) {
+        try {
+          await fetch(`http://localhost:5000/delete_temp/${this.imageId}`, {
+            method: 'DELETE'
+          });
+        } catch (err) {
+          console.error('Erreur suppression image précédente :', err);
         }
+      }
 
-        this.loading = true;
-        this.image = file;
-        this.imagePreview = URL.createObjectURL(file);
-        this.imageId = null;
-        this.etat = '';
-        this.etatAnnot = '';
+      this.loading = true;
+      this.image = file;
+      this.imagePreview = URL.createObjectURL(file);
+      this.imageId = null;
+      this.etat = '';
+      this.etatAnnot = '';
 
-        const formData = new FormData();
-        const user = JSON.parse(localStorage.getItem('user'));
-        formData.append('image', file);
-        formData.append('mode_classification', 'auto');
-        formData.append('utilisateur_id', user?.id || '');
-        formData.append('source', user?.role || 'citoyen');
+      const formData = new FormData();
+      const user = JSON.parse(localStorage.getItem('user'));
+      formData.append('image', file);
+      formData.append('mode_classification', 'auto');
+      formData.append('utilisateur_id', user?.id || '');
+      formData.append('source', user?.role || 'citoyen');
 
-        fetch('http://localhost:5000/upload', {
-            method: 'POST',
-            body: formData
-        })
+      // Ajout du groupe de règles choisi
+      formData.append('groupe_id', this.selectedGroupe);
 
+      fetch('http://localhost:5000/upload', {
+        method: 'POST',
+        body: formData
+      })
         .then(res => res.json())
         .then(data => {
-            this.imageId = data.image_id;
-            this.etat = data.classification_auto;
-            this.etatAnnot = data.classification_auto;
+          this.imageId = data.image_id;
+          this.etat = data.classification_auto;
+          this.etatAnnot = data.classification_auto;
 
-            if (data.classification_auto === 'non déterminé') {
-                this.message = 'Classification non déterminée. Veuillez annoter manuellement.';
-            } else {
-                this.message = data.message || '';
-            }
+          if (data.classification_auto === 'non déterminé') {
+            this.message = this.lang === 'fr'
+              ? 'Classification non déterminée. Veuillez annoter manuellement.'
+              : 'Automatic classification failed. Please annotate manually.';
+          } else {
+            this.message = data.message || '';
+          }
         })
         .catch(err => {
-            console.error('Erreur classification :', err);
-            this.message = "Erreur lors de la classification.";
+          console.error('Erreur classification :', err);
+          this.message = this.lang === 'fr'
+            ? "Erreur lors de la classification."
+            : "Classification error.";
         })
         .finally(() => {
-            this.loading = false;
+          this.loading = false;
         });
     },
-
     toggleCamera() {
-        if (this.cameraActive) {
-            const stream = this.$refs.video?.srcObject;
-            if (stream) {
-                stream.getTracks().forEach(track => track.stop());
-            }
-            this.$refs.video.srcObject = null;
-            this.cameraActive = false;
-            this.$refs.video.style.display = 'none';
-        } else {
-            navigator.mediaDevices.getUserMedia({ video: true })
-            .then(stream => {
-                this.$refs.video.srcObject = stream;
-                this.$refs.video.style.display = 'block';
-                this.cameraActive = true;
-            })
-            .catch(err => {
-                console.error("Erreur caméra :", err);
-            });
+      if (this.cameraActive) {
+        const stream = this.$refs.video?.srcObject;
+        if (stream) {
+          stream.getTracks().forEach(track => track.stop());
         }
+        this.$refs.video.srcObject = null;
+        this.cameraActive = false;
+        this.$refs.video.style.display = 'none';
+      } else {
+        navigator.mediaDevices.getUserMedia({ video: true })
+          .then(stream => {
+            this.$refs.video.srcObject = stream;
+            this.$refs.video.style.display = 'block';
+            this.cameraActive = true;
+          })
+          .catch(err => {
+            console.error("Erreur caméra :", err);
+          });
+      }
     },
-
     capturePhoto() {
       const video = this.$refs.video;
       const canvas = this.$refs.canvas;
@@ -238,9 +276,10 @@ export default {
       })
         .then(res => res.json())
         .then(data => {
-          this.message = data.message || 'Annotation mise à jour';
+          this.message = data.message || (this.lang === 'fr' ? 'Annotation mise à jour' : 'Annotation updated');
           setTimeout(() => this.message = '', 4000);
 
+          // Réinitialisation
           this.image = null;
           this.imageId = null;
           this.imagePreview = null;
@@ -260,7 +299,7 @@ export default {
         })
         .catch(err => {
           console.error('Erreur :', err);
-          this.message = 'Erreur lors de la mise à jour.';
+          this.message = this.lang === 'fr' ? 'Erreur lors de la mise à jour.' : 'Update error.';
         });
     },
     initMap() {
@@ -283,6 +322,16 @@ export default {
           this.localisation.lon = position.coords.longitude;
         });
       }
+    },
+    stopCamera() {
+      if (!this.cameraActive) return;
+      const stream = this.$refs.video?.srcObject;
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+      this.$refs.video.srcObject = null;
+      this.cameraActive = false;
+      this.$refs.video.style.display = 'none';
     }
   }
 };
@@ -488,5 +537,48 @@ p {
 
 .camera-active .camera-toggle {
   background-color: #10b981;
+}
+
+label[for="groupe"] {
+  font-weight: 600;
+  margin-bottom: 6px;
+  display: inline-block;
+  font-size: 1rem;
+  color: inherit; /* hérite de la couleur du texte global */
+}
+
+select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1.5px solid #ccc; /* bordure grise claire au repos */
+  border-radius: 8px;
+  font-size: 1rem;
+  color: inherit; /* texte couleur normale */
+  background-color: white;
+  outline: none;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: border-color 0.3s ease;
+}
+
+select:focus {
+  border-color: #48bb78; /* bordure verte au focus */
+  box-shadow: 0 0 5px #48bb78aa;
+}
+
+/* Mode sombre */
+.dark-theme label[for="groupe"] {
+  color: #e5e7eb;
+}
+
+.dark-theme select[v-model="selectedGroupe"] {
+  background: #374151 url("data:image/svg+xml,%3csvg fill='none' stroke='%23e5e7eb' stroke-width='2' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3e%3cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'%3e%3c/path%3e%3c/svg%3e") no-repeat right 12px center / 1em auto;
+  border: 1px solid #4b5563;
+  color: #e5e7eb;
+}
+
+.dark-theme select[v-model="selectedGroupe"]:focus {
+  border-color: #10b981;
+  box-shadow: 0 0 5px #10b981aa;
 }
 </style>

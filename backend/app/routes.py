@@ -38,6 +38,7 @@ def upload_image():
 
     utilisateur_id = request.form.get("utilisateur_id")
     source = request.form.get("source", "citoyen")
+    groupe_id = request.form.get("groupe_id")
 
     try:
         # 1. Conversion et sauvegarde temporaire
@@ -46,7 +47,7 @@ def upload_image():
         img.save(save_path, format='WEBP', quality=80, method=6)
 
         # 2. Traitement : caractéristiques + classification
-        image_id, label, msg = traiter_image(save_path, utilisateur_id, source)
+        image_id, label, msg = traiter_image(save_path, utilisateur_id, source, groupe_id=groupe_id)
         if label == "non déterminé":
             msg = "Classification non déterminée. Veuillez annoter manuellement."
 

@@ -1,6 +1,6 @@
 from database.utils.db_model import db, CaracteristiquesImage, RegleClassification, Image
 
-def appliquer_regles_sur_image(image_id):
+def appliquer_regles_sur_image(image_id, groupe_id=None):
     # 1. Récupérer les caractéristiques de l’image
     caracteristiques = CaracteristiquesImage.query.get(image_id)
     if not caracteristiques:
@@ -20,8 +20,12 @@ def appliquer_regles_sur_image(image_id):
         'texture_score': caracteristiques.texture_score or 0,
     }
 
-    # 3. Charger les règles actives
-    regles = RegleClassification.query.filter_by(active=True).all()
+    # 3. Charger les règles actives (filtrées par groupe si précisé)
+    if groupe_id:
+        regles = RegleClassification.query.filter_by(active=True, groupe_id=groupe_id).all()
+    else:
+        regles = RegleClassification.query.filter_by(active=True).all()
+
     if not regles:
         return None, "Aucune règle active trouvée."
 
@@ -29,16 +33,15 @@ def appliquer_regles_sur_image(image_id):
     for regle in regles:
         try:
             if eval(regle.condition_rc, {}, variables):
-                # 5. Si la condition est vraie, on applique le label (via nom de la règle)
                 image = Image.query.get(image_id)
-                image.classification_auto = regle.nom_regle.lower()  # Ex: "dirty"
+                image.classification_auto = regle.nom_regle.lower()
                 db.session.commit()
                 return regle.nom_regle.lower(), f"Classification : {regle.nom_regle}"
         except Exception as e:
             print(f"Erreur lors de l'évaluation de la règle {regle.nom_regle}: {e}")
             continue
 
-    # Si aucune règle ne s’applique
+    # 5. Si aucune règle ne s’applique
     image = Image.query.get(image_id)
     image.classification_auto = "non déterminé"
     db.session.commit()
