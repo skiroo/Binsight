@@ -20,7 +20,7 @@
 
       <!-- 🌐 Bouton langue -->
       <button class="theme-btn" @click="$emit('toggle-lang')">
-        {{ lang === 'fr' ? "🇬🇧 EN" : "🇫🇷 FR" }}
+        {{ lang === 'fr' ? "EN" : "FR" }}
       </button>
 
       <template v-if="user">

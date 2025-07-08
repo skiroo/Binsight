@@ -14,9 +14,14 @@ export const register = (data) =>
 export const getLocalisations = () =>
     API.get('/api/localisations');
 
-export default API;
+export const getStats = (periode = 'day') =>
+  API.get(`/stats?periode=${periode}`).then(res => res.data);
 
 export async function getAlerts() {
   return await axios.get('/api/alerts')
 }
+
+export default API;
+
+
 

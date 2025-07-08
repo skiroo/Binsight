@@ -1,40 +1,72 @@
 <template>
   <div class="map-wrapper">
-    <!-- Sidebar -->
     <div class="sidebar">
       <h3>{{ lang === 'fr' ? 'Filtres' : 'Filters' }}</h3>
 
-      <label><b>{{ lang === 'fr' ? 'État' : 'Status' }} :</b></label><br />
-      <label><input type="radio" value="all" v-model="filter" /> {{ lang === 'fr' ? 'Tous' : 'All' }}</label><br />
-      <label><input type="radio" value="clean" v-model="filter" /> {{ lang === 'fr' ? 'Propres' : 'Clean' }}</label><br />
-      <label><input type="radio" value="dirty" v-model="filter" /> {{ lang === 'fr' ? 'Pleines' : 'Full' }}</label><br /><br />
+      <!-- État -->
+      <label><b>{{ lang === 'fr' ? 'État' : 'Status' }} :</b></label>
+      <div class="etat-filters">
+        <button :class="{ active: filter === 'all' }" @click="setFilter('all')">{{ lang === 'fr' ? 'Tous' : 'All' }}</button>
+        <button :class="{ active: filter === 'clean' }" @click="setFilter('clean')">{{ lang === 'fr' ? 'Propres' : 'Clean' }}</button>
+        <button :class="{ active: filter === 'dirty' }" @click="setFilter('dirty')">{{ lang === 'fr' ? 'Pleines' : 'Full' }}</button>
+      </div>
 
-      <label><b>📍 {{ lang === 'fr' ? 'Quartier' : 'District' }} :</b></label><br />
-      <input type="text" v-model="selectedArrondissement" list="arr-options" :placeholder="lang === 'fr' ? 'Ex: Paris 15e' : 'e.g., Paris 15'" />
-      <datalist id="arr-options">
-        <option v-for="a in arrondissements" :key="a" :value="a" />
-      </datalist><br /><br />
+      <!-- Source -->
+      <label><b>{{ lang === 'fr' ? 'Source' : 'Source' }} :</b></label>
+      <div class="source-filters">
+        <button :class="{ active: selectedSource === 'all' }" @click="setSource('all')">{{ lang === 'fr' ? 'Toutes' : 'All' }}</button>
+        <button :class="{ active: selectedSource === 'citoyen' }" @click="setSource('citoyen')">{{ lang === 'fr' ? 'Citoyen' : 'Citizen' }}</button>
+        <button :class="{ active: selectedSource === 'agent' }" @click="setSource('agent')">{{ lang === 'fr' ? 'Agent' : 'Agent' }}</button>
+      </div>
 
-      <label><b>{{ lang === 'fr' ? 'Date minimale' : 'Minimum date' }} :</b></label><br />
-      <input type="date" v-model="dateMin" /><br /><br />
+      <!-- Quartier -->
+      <label><b>{{ lang === 'fr' ? 'Quartier' : 'District' }} :</b></label>
+      <div class="quartier-wrapper">
+        <input
+          type="text"
+          v-model="selectedArrondissementInput"
+          class="quartier-input"
+          :placeholder="lang === 'fr' ? 'Ex: Paris 15e' : 'e.g., Paris 15'"
+          @input="updateSuggestions"
+          @blur="hideSuggestionsWithDelay"
+          @focus="showSuggestions = selectedArrondissementInput.length >= 2"
+        />
+        <ul v-if="showSuggestions" class="suggestion-list">
+          <li v-for="a in arrondissementSuggestions" :key="a" @mousedown.prevent="selectSuggestion(a)">{{ a }}</li>
+        </ul>
+      </div>
+      <button class="reset-button" @click="resetDistrict">{{ lang === 'fr' ? 'Réinitialiser le quartier' : 'Reset district' }}</button>
 
-      <label><b>{{ lang === 'fr' ? 'Source' : 'Source' }} :</b></label><br />
-      <select v-model="selectedSource">
-        <option value="all">{{ lang === 'fr' ? 'Toutes' : 'All' }}</option>
-        <option value="citoyen">{{ lang === 'fr' ? 'Citoyen' : 'Citizen' }}</option>
-        <option value="agent">{{ lang === 'fr' ? 'Agent' : 'Agent' }}</option>
-        <option value="caméra">{{ lang === 'fr' ? 'Caméra' : 'Camera' }}</option>
-      </select><br /><br />
+      <!-- Dates -->
+      <label><b>{{ lang === 'fr' ? 'Du' : 'From' }} :</b></label>
+      <input type="date" v-model="dateMin" />
+      <label><b>{{ lang === 'fr' ? 'Au' : 'To' }} :</b></label>
+      <input type="date" v-model="dateMax" />
 
-      <label><b>{{ lang === 'fr' ? 'Autour de (lat, lon + km)' : 'Around (lat, lon + km)' }} :</b></label><br />
-      <input type="number" v-model="rayonLat" :placeholder="lang === 'fr' ? 'Latitude' : 'Latitude'" /><br />
-      <input type="number" v-model="rayonLon" :placeholder="lang === 'fr' ? 'Longitude' : 'Longitude'" /><br />
-      <input type="number" v-model="rayonKm" :placeholder="lang === 'fr' ? 'Rayon (km)' : 'Radius (km)'" /><br /><br />
+      <label><b>{{ lang === 'fr' ? 'Dates rapides' : 'Quick dates' }} :</b></label>
+      <div class="date-filters">
+        <button :class="{ active: dateRange === 'today' }" @click="setDateRange('today')">{{ lang === 'fr' ? 'Aujourd\'hui' : 'Today' }}</button>
+        <button :class="{ active: dateRange === '7d' }" @click="setDateRange('7d')">{{ lang === 'fr' ? '7 jours' : '7 days' }}</button>
+        <button :class="{ active: dateRange === 'month' }" @click="setDateRange('month')">{{ lang === 'fr' ? 'Ce mois' : 'This month' }}</button>
+      </div>
+      <button class="reset-button" @click="resetDateFilters">{{ lang === 'fr' ? 'Réinitialiser les dates' : 'Reset dates' }}</button>
+
+      <!-- Coordonnées -->
+      <label><b>{{ lang === 'fr' ? 'Autour de' : 'Around' }} :</b></label>
+      <input type="number" v-model="rayonLat" :placeholder="lang === 'fr' ? 'Latitude' : 'Latitude'" disabled />
+      <input type="number" v-model="rayonLon" :placeholder="lang === 'fr' ? 'Longitude' : 'Longitude'" disabled />
+      <input type="number" v-model="rayonKm" :placeholder="lang === 'fr' ? 'Rayon (km)' : 'Radius (km)'" />
+      <button class="reset-button" @click="resetCoordFilters">{{ lang === 'fr' ? 'Réinitialiser les coordonnées' : 'Reset coordinates' }}</button>
 
       <button @click="recentrer">📍 {{ lang === 'fr' ? 'Ma position' : 'My position' }}</button>
+
+        <!-- Réinitialiser tous -->
+        <button class="reset-button" @click="resetAllFilters" style="margin-top: 10px; font-weight: bold;">
+            {{ lang === 'fr' ? 'Réinitialiser tous les filtres' : 'Reset all filters' }}
+        </button>
     </div>
 
-    <!-- Map -->
+    <!-- Carte -->
     <div class="map-container">
       <h1>{{ lang === 'fr' ? 'Carte des poubelles' : 'Bin Map' }}</h1>
       <div id="leaflet-map"></div>
@@ -43,10 +75,6 @@
         <div><span class="legend-dot dirty"></span> {{ lang === 'fr' ? 'Pleine' : 'Full' }}</div>
         <div><span class="legend-dot clean"></span> {{ lang === 'fr' ? 'Vide' : 'Empty' }}</div>
       </div>
-
-      <p class="map-count">
-        🔢 {{ visibleCount }} {{ lang === 'fr' ? 'point(s) affiché(s)' : 'point(s) shown' }}
-      </p>
 
       <div v-if="alertes.length > 0" class="alert-box">
         <h3>🚨 {{ lang === 'fr' ? 'Zones en alerte :' : 'Alert zones:' }}</h3>
@@ -69,25 +97,29 @@ import 'leaflet.markercluster/dist/MarkerCluster.css'
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css'
 import { getLocalisations, getAlerts } from '@/services/api'
 
-const props = defineProps({
-  isDark: Boolean,
-  lang: String
-})
+const props = defineProps({ isDark: Boolean, lang: String })
 
+// Reactive states
 const filter = ref('all')
-const selectedArrondissement = ref('all')
 const selectedSource = ref('all')
+const selectedArrondissementInput = ref('')
 const dateMin = ref(null)
+const dateMax = ref(null)
+const dateRange = ref(null)
 const rayonLat = ref(null)
 const rayonLon = ref(null)
 const rayonKm = ref(null)
 const arrondissements = ref([])
+const arrondissementSuggestions = ref([])
+const showSuggestions = ref(false)
 const visibleCount = ref(0)
 const alertes = ref([])
 
+// Map and markers
 let map = null
 let markerGroup = null
 let allPoints = []
+let rayonCircle = null
 
 function afficherPoints(points) {
   markerGroup.clearLayers()
@@ -95,19 +127,31 @@ function afficherPoints(points) {
 
   points.forEach(p => {
     if (!p.latitude || !p.longitude) return
-    const color = p.etat_annot === 'dirty' ? 'red' : 'green'
-    const html = `<div style="text-align:center">
-      <svg height="14" width="14"><circle cx="7" cy="7" r="7" fill="${color}" /></svg>
-    </div>`
+
+    const color = p.etat_annot === 'dirty' ? 'orangered' : 'green'
+    const html = `<svg height="14" width="14"><circle cx="7" cy="7" r="7" fill="${color}" /></svg>`
+
     const marker = L.marker([p.latitude, p.longitude], {
       icon: L.divIcon({ html, className: '' })
-    }).bindPopup(`
+    })
+
+    const popupContent = `
       <b>${p.fichier_nom}</b><br>
       État : ${p.etat_annot}<br>
       Ville : ${p.ville || 'non spécifiée'}<br>
       Quartier : ${p.quartier || 'non spécifié'}<br>
-      Source : ${p.source || 'inconnue'}
-    `)
+      Source : ${p.source || 'inconnue'}`
+
+    marker.bindPopup(popupContent)
+
+    marker.on('click', (e) => {
+      rayonLat.value = p.latitude
+      rayonLon.value = p.longitude
+      updateRayonCircle()
+      L.popup().setLatLng(e.latlng).setContent(popupContent).openOn(map)
+      appliquerFiltres()
+    })
+
     markerGroup.addLayer(marker)
   })
 }
@@ -115,27 +159,98 @@ function afficherPoints(points) {
 function appliquerFiltres() {
   let filtrés = allPoints
   if (filter.value !== 'all') filtrés = filtrés.filter(p => p.etat_annot === filter.value)
-  if (selectedArrondissement.value !== 'all' && selectedArrondissement.value.trim() !== '')
-    filtrés = filtrés.filter(p => (p.quartier || p.ville || '').toLowerCase() === selectedArrondissement.value.toLowerCase())
-  if (selectedSource.value !== 'all')
-    filtrés = filtrés.filter(p => (p.source || '').toLowerCase() === selectedSource.value)
-  if (dateMin.value)
-    filtrés = filtrés.filter(p => p.date_upload && new Date(p.date_upload) >= new Date(dateMin.value))
+
+  const arrInput = selectedArrondissementInput.value.trim().toLowerCase()
+  if (arrInput) filtrés = filtrés.filter(p => (p.quartier || p.ville || '').toLowerCase().includes(arrInput))
+
+  if (selectedSource.value !== 'all') filtrés = filtrés.filter(p => (p.source || '').toLowerCase() === selectedSource.value)
+  if (dateMin.value) filtrés = filtrés.filter(p => p.date_upload && new Date(p.date_upload) >= new Date(dateMin.value))
+  if (dateMax.value) filtrés = filtrés.filter(p => p.date_upload && new Date(p.date_upload) <= new Date(dateMax.value))
+
   if (rayonLat.value && rayonLon.value && rayonKm.value) {
     const R = 6371
     filtrés = filtrés.filter(p => {
       const dLat = (p.latitude - rayonLat.value) * Math.PI / 180
       const dLon = (p.longitude - rayonLon.value) * Math.PI / 180
       const a = Math.sin(dLat / 2) ** 2 +
-        Math.cos(p.latitude * Math.PI / 180) * Math.cos(rayonLat.value * Math.PI / 180) *
-        Math.sin(dLon / 2) ** 2
+                Math.cos(p.latitude * Math.PI / 180) * Math.cos(rayonLat.value * Math.PI / 180) *
+                Math.sin(dLon / 2) ** 2
       const d = 2 * R * Math.asin(Math.sqrt(a))
       return d <= rayonKm.value
     })
   }
+
   afficherPoints(filtrés)
   verifierAlertes()
 }
+
+function updateRayonCircle() {
+  if (rayonLat.value && rayonLon.value && rayonKm.value) {
+    if (rayonCircle) map.removeLayer(rayonCircle)
+    rayonCircle = L.circle([rayonLat.value, rayonLon.value], {
+      radius: rayonKm.value * 1000,
+      color: '#10b981',
+      weight: 2,
+      fillOpacity: 0.1
+    }).addTo(map)
+  }
+}
+
+function setDateRange(type) {
+  const today = new Date()
+  const past = new Date()
+  dateRange.value = type
+
+  if (type === 'today') {
+    dateMin.value = dateMax.value = today.toISOString().split('T')[0]
+  } else if (type === '7d') {
+    past.setDate(today.getDate() - 6)
+    dateMin.value = past.toISOString().split('T')[0]
+    dateMax.value = today.toISOString().split('T')[0]
+  } else if (type === 'month') {
+    past.setDate(1)
+    dateMin.value = past.toISOString().split('T')[0]
+    dateMax.value = today.toISOString().split('T')[0]
+  }
+}
+
+function resetDateFilters() {
+  dateMin.value = dateMax.value = dateRange.value = null
+}
+
+function resetCoordFilters() {
+  rayonLat.value = rayonLon.value = rayonKm.value = null
+  if (rayonCircle) map.removeLayer(rayonCircle)
+  appliquerFiltres()
+}
+
+function selectSuggestion(val) {
+  selectedArrondissementInput.value = val
+  showSuggestions.value = false
+  appliquerFiltres()
+}
+
+function hideSuggestionsWithDelay() {
+  setTimeout(() => showSuggestions.value = false, 200)
+}
+
+function updateSuggestions() {
+  if (selectedArrondissementInput.value.length >= 2) {
+    const input = selectedArrondissementInput.value.toLowerCase()
+    arrondissementSuggestions.value = arrondissements.value.filter(a => a.toLowerCase().includes(input)).slice(0, 10)
+    showSuggestions.value = true
+  } else {
+    showSuggestions.value = false
+  }
+}
+
+function resetDistrict() {
+  selectedArrondissementInput.value = ''
+  appliquerFiltres()
+}
+
+function setFilter(val) { filter.value = val }
+function setSource(val) { selectedSource.value = val }
 
 async function verifierAlertes() {
   try {
@@ -146,13 +261,32 @@ async function verifierAlertes() {
   }
 }
 
-watch([filter, selectedArrondissement, selectedSource, dateMin, rayonLat, rayonLon, rayonKm], appliquerFiltres)
+function resetAllFilters() {
+  filter.value = 'all'
+  selectedSource.value = 'all'
+  selectedArrondissementInput.value = ''
+  dateMin.value = null
+  dateMax.value = null
+  dateRange.value = null
+  rayonLat.value = null
+  rayonLon.value = null
+  rayonKm.value = null
+  if (rayonCircle) map.removeLayer(rayonCircle)
+  appliquerFiltres()
+}
+
+watch([
+  filter, selectedSource, selectedArrondissementInput,
+  dateMin, dateMax, rayonLat, rayonLon, rayonKm
+], appliquerFiltres)
+
+watch(rayonKm, updateRayonCircle)
 
 function recentrer() {
   if (!navigator.geolocation) return alert("Géolocalisation non supportée.")
   navigator.geolocation.getCurrentPosition(
     pos => map.setView([pos.coords.latitude, pos.coords.longitude], 14),
-    err => alert("Impossible d'obtenir votre position.")
+    () => alert("Impossible d'obtenir votre position.")
   )
 }
 
@@ -161,16 +295,19 @@ onMounted(async () => {
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors'
   }).addTo(map)
+
   markerGroup = L.markerClusterGroup()
   map.addLayer(markerGroup)
+
   const response = await getLocalisations()
   allPoints = response.data
+
   const raw = allPoints.map(p => p.quartier || p.ville || '').filter(Boolean)
   arrondissements.value = [...new Set(raw)].sort()
+
   appliquerFiltres()
 })
 </script>
-
 
 <style scoped>
 .map-wrapper {
@@ -197,8 +334,19 @@ onMounted(async () => {
   font-weight: bold;
 }
 
-.sidebar label {
+.sidebar label,
+.sidebar input,
+.sidebar select,
+.sidebar button {
   display: block;
+  width: 100%;
+  font-size: 13px;
+  margin-bottom: 8px;
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+
+.sidebar label {
   margin: 6px 0 2px;
   font-weight: 600;
 }
@@ -206,21 +354,10 @@ onMounted(async () => {
 .sidebar input,
 .sidebar select,
 .sidebar button {
-  width: 100%;
   padding: 6px 8px;
-  font-size: 13px;
-  margin-bottom: 8px;
-  border-radius: 6px;
   border: 1px solid var(--input-border);
   background-color: var(--input-bg);
   color: var(--input-text);
-  box-sizing: border-box;
-}
-
-.sidebar input[type="radio"] {
-  width: auto;
-  margin-right: 6px;
-  accent-color: var(--accent-color);
 }
 
 .sidebar button {
@@ -233,85 +370,6 @@ onMounted(async () => {
 
 .sidebar button:hover {
   background-color: var(--btn-hover);
-}
-
-:root {
-  --sidebar-bg: #ffffff;
-  --sidebar-text: #000;
-  --input-bg: #ffffff;
-  --input-text: #000;
-  --input-border: #ccc;
-  --btn-bg: #f0f0f0;
-  --btn-text: #000;
-  --btn-border: #bbb;
-  --btn-hover: #e0e0e0;
-  --accent-color: #10b981;
-}
-
-body.dark-theme {
-  --sidebar-bg: #101010;
-  --sidebar-text: #f5f5f5;
-  --input-bg: #1f1f1f;
-  --input-text: #f5f5f5;
-  --input-border: #555;
-  --btn-bg: #2a2a2a;
-  --btn-text: #fff;
-  --btn-border: #444;
-  --btn-hover: #3a3a3a;
-  --accent-color: #10b981;
-}
-
-input, select, button {
-  width: 100%;
-  padding: 6px 10px;
-  margin-bottom: 10px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-  font-size: 14px;
-  background-color: var(--input-bg);
-  color: var(--input-text);
-}
-
-input[type="radio"] {
-  width: auto;
-  margin-right: 5px;
-  accent-color: var(--accent-color);
-}
-
-button {
-  cursor: pointer;
-  border: 1px solid var(--btn-border);
-  background-color: var(--btn-bg);
-  color: var(--btn-text);
-  transition: background-color 0.2s ease;
-}
-
-button:hover {
-  background-color: var(--btn-hover);
-}
-
-:root {
-  --sidebar-bg: #ffffff;
-  --sidebar-text: #000;
-  --input-bg: #ffffff;
-  --input-text: #000;
-  --btn-bg: #f5f5f5;
-  --btn-text: #000;
-  --btn-border: #ccc;
-  --btn-hover: #e0e0e0;
-  --accent-color: #10b981;
-}
-
-body.dark-theme {
-  --sidebar-bg: #1a1a1a;
-  --sidebar-text: #f5f5f5;
-  --input-bg: #2a2a2a;
-  --input-text: #f5f5f5;
-  --btn-bg: #333;
-  --btn-text: #fff;
-  --btn-border: #555;
-  --btn-hover: #444;
-  --accent-color: #10b981;
 }
 
 .map-container {
@@ -345,18 +403,8 @@ body.dark-theme {
   vertical-align: middle;
 }
 
-.legend-dot.dirty {
-  background-color: red;
-}
-
-.legend-dot.clean {
-  background-color: green;
-}
-
-.map-count {
-  font-size: 14px;
-  color: var(--sidebar-text);
-}
+.legend-dot.dirty { background-color: orangered; }
+.legend-dot.clean { background-color: green; }
 
 .alert-box {
   background: #ffe0e0;
@@ -368,4 +416,102 @@ body.dark-theme {
   max-width: 400px;
   margin-inline: auto;
 }
+
+.etat-filters,
+.source-filters,
+.date-filters {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 10px;
+}
+
+.etat-filters button,
+.source-filters button,
+.date-filters button {
+  flex: 1;
+  background: white;
+  color: black;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.etat-filters button.active,
+.source-filters button.active,
+.date-filters button.active {
+  background-color: #16a085;
+  color: white;
+  font-weight: bold;
+}
+
+.quartier-wrapper {
+  position: relative;
+}
+
+.quartier-input {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 13px;
+  border-radius: 6px;
+  border: 1px solid var(--input-border);
+  background-color: var(--input-bg);
+  color: var(--input-text);
+}
+
+.suggestion-list {
+  list-style: none;
+  padding: 0;
+  margin: 2px 0 0;
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  background-color: #fff;
+  color: #000;
+  max-height: 180px;
+  overflow-y: auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  position: absolute;
+  width: 100%;
+  z-index: 10;
+}
+
+.suggestion-list li {
+  padding: 8px 10px;
+  cursor: pointer;
+  color: var(--input-text);
+  transition: background-color 0.2s;
+}
+
+.suggestion-list li:hover {
+  background-color: var(--btn-hover);
+  font-weight: bold;
+}
+
+:root {
+  --sidebar-bg: #ffffff;
+  --sidebar-text: #000;
+  --input-bg: #ffffff;
+  --input-text: #000;
+  --input-border: #ccc;
+  --btn-bg: #f5f5f5;
+  --btn-text: #000;
+  --btn-border: #ccc;
+  --btn-hover: #e0e0e0;
+  --accent-color: #10b981;
+}
+
+body.dark-theme {
+  --sidebar-bg: #1a1a1a;
+  --sidebar-text: #f5f5f5;
+  --input-bg: #2a2a2a;
+  --input-text: #f5f5f5;
+  --input-border: #555;
+  --btn-bg: #333;
+  --btn-text: #fff;
+  --btn-border: #555;
+  --btn-hover: #444;
+  --accent-color: #10b981;
+}
+
 </style>

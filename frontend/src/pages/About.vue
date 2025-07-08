@@ -116,7 +116,7 @@ const text = computed(() => ({
 .conclusion {
   margin-top: 60px;
   font-size: 0.95rem;
-  color: #ccc;
+  color: #16a085;
   max-width: 700px;
   margin-left: auto;
   margin-right: auto;
