@@ -1,7 +1,7 @@
 <template>
   <header class="navbar">
     <div class="logo-title">
-      <span class="logo">🗑️</span>
+      <img src="@/assets/logo.png" alt="Logo Binsight" class="logo-image" />
       <h1 class="title">Binsight</h1>
     </div>
 
@@ -59,6 +59,12 @@ function logout() {
 </script>
 
 <style scoped>
+.logo-image {
+  height: 60px; 
+  width: auto;
+  object-fit: contain;
+  margin-right: 0.75rem;
+}
 .navbar {
   background-color: #2c3e50;
   color: white;
