@@ -34,6 +34,3 @@ export async function getAlerts(periode = 'day', start = null, end = null) {
 }
 
 export default API;
-
-
-

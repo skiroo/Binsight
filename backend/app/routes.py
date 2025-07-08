@@ -462,9 +462,12 @@ def get_alerts():
     date_min = request.args.get('date_min')
     date_max = request.args.get('date_max')
 
-    query = db.session.query(Localisation.quartier, db.func.count(Image.id)) \
-        .join(Image) \
-        .filter(Image.etat_annot == 'dirty')
+    query = db.session.query(
+        Localisation.quartier,
+        db.func.count(Image.id),
+        db.func.avg(Localisation.latitude),
+        db.func.avg(Localisation.longitude)
+    ).join(Image).filter(Image.etat_annot == 'dirty')
 
     if periode == 'day':
         today = datetime.today().date()
@@ -488,11 +491,13 @@ def get_alerts():
 
     results = query.group_by(Localisation.quartier).all()
 
-    for quartier, count in results:
-        if quartier and count >= seuil:
+    for quartier, count, lat_avg, lon_avg in results:
+        if quartier and count >= seuil and lat_avg and lon_avg:
             alerts.append({
                 'quartier': quartier,
-                'nb_dirty': count
+                'nb_dirty': count,
+                'latitude': float(lat_avg),
+                'longitude': float(lon_avg)
             })
 
     return jsonify({'alertes': alerts, 'seuil': seuil})
