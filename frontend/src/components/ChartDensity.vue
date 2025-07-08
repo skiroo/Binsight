@@ -82,11 +82,16 @@ export default {
 
 <style scoped>
 .chart-container {
-  background: white;
   padding: 1rem;
   border-radius: 1rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   height: 360px;
+  background: white;
+  color: #111827;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+:deep(.dark-theme) .chart-container {
+  background: #161b22;
+  color: #f1f1f1;
 }
 
 .chart-title {

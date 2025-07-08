@@ -1,5 +1,5 @@
 <template>
-  <div class="dashboard-container">
+  <div class="dashboard-container" :class="{ 'dark-theme': isDark }">
     <h1 class="dashboard-title">{{ t('Tableau de bord', 'Dashboard') }}</h1>
 
     <!-- 🎛️ Barre de filtre -->
@@ -54,11 +54,10 @@ import ChartTrend from '@/components/ChartTrend.vue';
 import ChartPie from '@/components/ChartPie.vue';
 import ChartHeatmap from '@/components/ChartHeatmap.vue';
 
-const props = defineProps({ lang: String });
+const props = defineProps({ lang: String, isDark: Boolean });
 const t = (fr, en) => props.lang === 'fr' ? fr : en;
 
 const stats = ref({ total_images: 0, vides_percent: 0, pleines_percent: 0 });
-
 const periode = ref('day');
 const startDate = ref('');
 const endDate = ref('');
@@ -85,18 +84,32 @@ function handlePeriodChange() {
 
 onMounted(fetchStats);
 </script>
-
 <style scoped>
 .dashboard-container {
   padding: 1.5rem;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+/* 🌞 Mode clair */
+.light-theme {
+  background-color: #ffffff;
+  color: #111827;
+}
+
+/* 🌙 Mode sombre */
+.dark-theme {
+  background-color: #0d1117; /* Noir bleuté comme ta page d'accueil */
+  color: #f1f1f1;
+}
+
+/* TITRE */
 .dashboard-title {
   font-size: 1.5rem;
   font-weight: bold;
   margin-bottom: 1rem;
 }
 
+/* BARRE DE FILTRES */
 .filter-bar {
   display: flex;
   flex-wrap: wrap;
@@ -110,15 +123,23 @@ onMounted(fetchStats);
   padding: 0.3rem 0.6rem;
   border-radius: 0.5rem;
   border: 1px solid #ccc;
+  background: white;
+  color: #111827;
+}
+.dark-theme .filter-bar select,
+.dark-theme .filter-bar input {
+  background: #161b22;
+  color: #f1f1f1;
+  border: 1px solid #333;
 }
 
+/* GRILLE STATS */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(1, 1fr);
+  grid-template-columns: 1fr;
   gap: 1rem;
   margin-bottom: 2rem;
 }
-
 @media (min-width: 768px) {
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -130,18 +151,20 @@ onMounted(fetchStats);
   }
 }
 
+/* CARTES */
 .stat-card {
   padding: 1rem;
   border-radius: 1rem;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
   background-color: white;
+  color: #111827;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
-.stat-vides {
-  background-color: #d1fae5;
+.dark-theme .stat-card {
+  background-color: #161b22;
+  color: #f1f1f1;
 }
-.stat-pleines {
-  background-color: #fecaca;
-}
+
 .stat-card h2 {
   font-size: 1.125rem;
   font-weight: 600;
@@ -150,6 +173,21 @@ onMounted(fetchStats);
   font-size: 1.875rem;
 }
 
+/* COULEURS SPÉCIFIQUES */
+.stat-vides {
+  background-color: #d1fae5;
+}
+.stat-pleines {
+  background-color: #fecaca;
+}
+.dark-theme .stat-vides {
+  background-color: #054438;
+}
+.dark-theme .stat-pleines {
+  background-color: #430415;
+}
+
+/* CHARTS */
 .charts-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -159,5 +197,11 @@ onMounted(fetchStats);
   .charts-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+}
+.dark-theme .charts-grid > * {
+  background-color: #161b22;
+  border-radius: 1rem;
+  padding: 1rem;
+  color: #ffffff;
 }
 </style>

@@ -81,16 +81,17 @@ watch([() => props.periode, () => props.start, () => props.end], fetchLocalisati
 </script>
 
 <style scoped>
-canvas {
-  width: 100% !important;
-  height: 300px !important;
-}
-
 .heatmap-container {
   background: white;
+  color: #111827;
   padding: 1rem;
   border-radius: 1rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+:deep(.dark-theme) .heatmap-container {
+  background: #161b22;
+  color: #f1f1f1;
 }
 
 .heatmap-title {
@@ -106,12 +107,12 @@ canvas {
   margin-top: 0.5rem;
 }
 
+/* Boutons toggle */
 .toggle-buttons {
   display: flex;
   gap: 0.5rem;
   margin-bottom: 0.5rem;
 }
-
 .toggle-buttons button {
   flex: 1;
   padding: 0.4rem 0.8rem;
@@ -120,11 +121,21 @@ canvas {
   background: #f0f0f0;
   cursor: pointer;
   font-weight: 500;
+  color: #111827;
 }
-
 .toggle-buttons button.active {
   background: #16a085;
   color: white;
   border-color: #16a085;
+}
+:deep(.dark-theme) .toggle-buttons button {
+  background: #222;
+  border-color: #444;
+  color: #eee;
+}
+:deep(.dark-theme) .toggle-buttons button.active {
+  background: #1abc9c;
+  border-color: #1abc9c;
+  color: #ffffff;
 }
 </style>
