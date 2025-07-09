@@ -49,6 +49,20 @@ export const updateRuleGroup = (id, data) =>
 export const deleteRuleGroup = (id) =>
   API.delete(`/api/rule-groups/${id}`);
 
+// Récupérer toutes les règles d'un groupe
+export const getRulesByGroup = (groupId) =>
+  API.get(`/api/rule-groups/${groupId}/rules`);
 
+// Ajouter une règle à un groupe
+export const addRuleToGroup = (groupId, data) =>
+  API.post(`/api/rule-groups/${groupId}/rules`, data);
+
+// Modifier une règle
+export const updateRule = (ruleId, data) =>
+  API.put(`/rules/${ruleId}`, data);
+
+// Supprimer une règle
+export const deleteRule = (ruleId) =>
+  API.delete(`/rules/${ruleId}`);
 
 export default API;
