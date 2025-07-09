@@ -12,6 +12,30 @@
         </p>
     </div>
 
+    <div v-if="role === 'admin'" class="box">
+        <h3>{{ lang === 'fr' ? 'Clés existantes' : 'Existing Keys' }}</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>{{ lang === 'fr' ? 'Clé' : 'Key' }}</th>
+                    <th>{{ lang === 'fr' ? 'Active' : 'Active' }}</th>
+                    <th>{{ lang === 'fr' ? 'Actions' : 'Actions' }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="cle in accessKeys" :key="cle.id">
+                    <td style="word-break: break-all">{{ cle.cle }}</td>
+                    <td class="center">
+                    <input type="checkbox" :checked="cle.valide" @change="toggleKeyStatus(cle)" />
+                    </td>
+                    <td>
+                    <button @click="removeKey(cle)" class="link red">{{ lang === 'fr' ? 'Supprimer' : 'Delete' }}</button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
     <h2>{{ lang === 'fr' ? 'Gestion des Règles' : 'Rule Management' }}</h2>
 
     <!-- Formulaire groupe -->
@@ -108,7 +132,7 @@ import { ref, onMounted } from 'vue';
 import {
   getRuleGroups, addRuleGroup, updateRuleGroup, deleteRuleGroup,
   getRulesByGroup, addRuleToGroup, deleteRule, updateRule,
-  generateAgentKey
+  generateAgentKey, getAccessKeys, updateAccessKey, deleteAccessKey
 } from '../services/api';
 
 const { lang } = defineProps({ lang: String });
@@ -121,6 +145,7 @@ const newGroup = ref({ nom: '', description: '' });
 const editingGroupId = ref(null);
 const newRule = ref({ nom: '', condition: '', description: '' });
 const generatedKey = ref('');
+const accessKeys = ref([]);
 
 async function createAgentKey() {
   try {
@@ -128,6 +153,27 @@ async function createAgentKey() {
     generatedKey.value = res.data.cle;
   } catch (err) {
     alert(lang === 'fr' ? "Erreur lors de la génération." : "Generation error.");
+  }
+}
+
+async function fetchAccessKeys() {
+  try {
+    const res = await getAccessKeys();
+    accessKeys.value = res.data;
+  } catch {
+    alert(lang === 'fr' ? "Erreur lors du chargement des clés." : "Error loading keys.");
+  }
+}
+
+async function toggleKeyStatus(cle) {
+  await updateAccessKey(cle.id, { valide: !cle.valide });
+  await fetchAccessKeys();
+}
+
+async function removeKey(cle) {
+  if (confirm(lang === 'fr' ? "Supprimer cette clé ?" : "Delete this key?")) {
+    await deleteAccessKey(cle.id);
+    await fetchAccessKeys();
   }
 }
 
@@ -184,7 +230,11 @@ async function removeRule(id) {
 async function toggleRuleActive(rule) {
   await updateRule(rule.id, { active: rule.active });
 }
-onMounted(fetchGroups);
+
+onMounted(() => {
+  fetchGroups();
+  if (role === 'admin') fetchAccessKeys();
+});
 </script>
 
 <style scoped>

@@ -19,6 +19,22 @@ export function generateAgentKey() {
   });
 }
 
+export const getAccessKeys = () =>
+  API.get('/access-keys', {
+    headers: { Role: localStorage.getItem('role') }
+  });
+
+export const updateAccessKey = (id, data) =>
+  API.put(`/access-keys/${id}`, data, {
+    headers: { Role: localStorage.getItem('role') }
+  });
+
+export const deleteAccessKey = (id) =>
+  API.delete(`/access-keys/${id}`, {
+    headers: { Role: localStorage.getItem('role') }
+  });
+
+
 // ============= API Localisation =============
 export const getLocalisations = () =>
     API.get('/api/localisations');

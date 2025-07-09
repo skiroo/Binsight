@@ -78,3 +78,50 @@ def generate_agent_key():
     db.session.commit()
 
     return jsonify({"cle": cle})
+
+@auth_routes.route('/access-keys', methods=['GET'])
+def get_access_keys():
+    role = request.headers.get('Role')
+    if role != 'admin':
+        return jsonify({"error": "Unauthorized"}), 403
+
+    cles = CleAcces.query.all()
+    return jsonify([
+        {
+            "id": c.id,
+            "cle": c.cle,
+            "valide": c.valide,
+            "role": c.role
+        }
+        for c in cles
+    ])
+
+@auth_routes.route('/access-keys/<int:id>', methods=['PUT'])
+def update_access_key(id):
+    role = request.headers.get('Role')
+    if role != 'admin':
+        return jsonify({"error": "Unauthorized"}), 403
+
+    cle = CleAcces.query.get(id)
+    if not cle:
+        return jsonify({"error": "Not found"}), 404
+
+    data = request.get_json()
+    cle.valide = data.get("valide", cle.valide)
+    db.session.commit()
+    return jsonify({"success": True})
+
+
+@auth_routes.route('/access-keys/<int:id>', methods=['DELETE'])
+def delete_access_key(id):
+    role = request.headers.get('Role')
+    if role != 'admin':
+        return jsonify({"error": "Unauthorized"}), 403
+
+    cle = CleAcces.query.get(id)
+    if not cle:
+        return jsonify({"error": "Not found"}), 404
+
+    db.session.delete(cle)
+    db.session.commit()
+    return jsonify({"success": True})
