@@ -1,6 +1,6 @@
 <template>
   <div class="container">
-    <h2>{{ lang === 'fr' ? 'Gestion des Règles' : 'Rule Management' }}</h2>
+    <h2>{{ lang === 'fr' ? 'Clé d\'accès' : 'Acces Key' }}</h2>    
 
     <div v-if="role === 'admin'" class="box">
         <h3>{{ lang === 'fr' ? 'Clé d’inscription agent' : 'Agent Signup Key' }}</h3>
@@ -11,6 +11,8 @@
             {{ lang === 'fr' ? 'Clé générée :' : 'Generated key:' }} <strong>{{ generatedKey }}</strong>
         </p>
     </div>
+
+    <h2>{{ lang === 'fr' ? 'Gestion des Règles' : 'Rule Management' }}</h2>
 
     <!-- Formulaire groupe -->
     <div class="box">
@@ -109,7 +111,7 @@ import {
   generateAgentKey
 } from '../services/api';
 
-const props = defineProps({lang: String });
+const { lang } = defineProps({ lang: String });
 const role = localStorage.getItem('role');
 
 const groups = ref([]);
@@ -284,7 +286,7 @@ thead {
 .generated-key {
   margin-top: 0.5rem;
   font-weight: bold;
-  color: #2563eb;
+  color: red;
   word-break: break-all;
 }
 </style>

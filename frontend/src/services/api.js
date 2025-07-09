@@ -14,7 +14,7 @@ export const register = (data) =>
 
 export function generateAgentKey() {
   const role = localStorage.getItem('role');
-  return axios.post('/api/generate-agent-key', {}, {
+  return API.post('/generate-agent-key', {}, {
     headers: { Role: role }
   });
 }
