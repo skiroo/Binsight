@@ -1,27 +1,27 @@
 <template>
   <div class="app-container" :class="isDark ? 'dark-theme' : 'light-theme'">
     <Navbar
-      :isDark="isDark"
-      :user="connectedUser"
-      :lang="lang"
-      @toggle-theme="toggleTheme"
-      @toggle-lang="toggleLang"
-      @open-login="showModal = true"
+        :isDark="isDark"
+        :user="connectedUser"
+        :lang="lang"
+        @toggle-theme="toggleTheme"
+        @toggle-lang="toggleLang"
+        @open-login="showModal = true"
     />
 
     <LoginRegisterModal
-  v-if="showModal"
-  :isDark="isDark"
-  :lang="lang"
-  @close="showModal = false"
-  @user-connected="handleUserConnected"
-/>
+        v-if="showModal"
+        :isDark="isDark"
+        :lang="lang"
+        @close="showModal = false"
+        @user-connected="handleUserConnected"
+    />
 
     <main class="flex-grow">
-      <RouterView :lang="lang" />
+        <RouterView :lang="lang" />
     </main>
 
-<Footer :lang="lang" />
+    <Footer :lang="lang" />
 
   </div>
 </template>

@@ -5,18 +5,28 @@ const API = axios.create({
     baseURL: 'http://localhost:5000',
 });
 
+// ============= API Connexion =============
 export const login = (email, mot_de_passe) =>
     API.post('/login', { email, mot_de_passe });
 
 export const register = (data) =>
     API.post('/register', data);
 
+export function generateAgentKey() {
+  const role = localStorage.getItem('role');
+  return axios.post('/api/generate-agent-key', {}, {
+    headers: { Role: role }
+  });
+}
+
+// ============= API Localisation =============
 export const getLocalisations = () =>
     API.get('/api/localisations');
 
 export const getTodayLocalisations = () =>
     API.get('/api/localisations/today');
 
+// API Stats
 export const getStats = (startOrPeriod, end = null) => {
   if (end) {
     return API.get(`/api/stats?periode=custom&date_min=${startOrPeriod}&date_max=${end}`).then(res => res.data);
@@ -25,6 +35,7 @@ export const getStats = (startOrPeriod, end = null) => {
   }
 };
 
+// Api Alertes
 export async function getAlerts(periode = 'day', start = null, end = null) {
   let url = `/api/alerts?periode=${periode}`;
   if (periode === 'custom' && start && end) {
@@ -32,6 +43,8 @@ export async function getAlerts(periode = 'day', start = null, end = null) {
   }
   return await API.get(url);
 }
+
+// ============= API Règles =============
 
 // Récupérer tous les groupes de règles
 export const getRuleGroups = () =>
@@ -64,5 +77,6 @@ export const updateRule = (ruleId, data) =>
 // Supprimer une règle
 export const deleteRule = (ruleId) =>
   API.delete(`/rules/${ruleId}`);
+
 
 export default API;

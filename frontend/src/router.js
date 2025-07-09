@@ -35,7 +35,16 @@ const routes = [
     {
         path: '/option',
         name: 'Option',
-        component : Option
+        component: Option,
+        
+        beforeEnter: (to, from, next) => {
+            const role = localStorage.getItem('role');
+            if (role === 'admin' || role === 'agent') {
+                next(); // autorisé
+            } else {
+                next('/'); // redirige vers accueil
+            }
+        }
     },
 
     {

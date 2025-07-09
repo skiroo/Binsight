@@ -59,6 +59,7 @@ export default {
       try {
         const res = await login(this.email, this.mot_de_passe);
         localStorage.setItem('user', JSON.stringify(res.data));
+        localStorage.setItem('role', res.data.role);
         this.$emit('login-success', res.data);
       } catch (err) {
         const msg = err.response?.data?.error || this.t('Erreur de connexion.', 'Login error.');

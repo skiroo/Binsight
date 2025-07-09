@@ -1,45 +1,49 @@
 <template>
-  <header class="navbar">
-    <div class="logo-title">
-      <img src="@/assets/logo.png" alt="Logo Binsight" class="logo-image" />
-      <h1 class="title">Binsight</h1>
-    </div>
+    <header class="navbar">
+        <div class="logo-title">
+            <img src="@/assets/logo.png" alt="Logo Binsight" class="logo-image" />
+            <h1 class="title">Binsight</h1>
+        </div>
 
-    <nav class="nav-links">
-      <router-link to="/">{{ lang === 'fr' ? "Accueil" : "Home" }}</router-link>
-      <router-link to="/upload">{{ lang === 'fr' ? "Image" : "Upload" }}</router-link>
-      <router-link to="/map">{{ lang === 'fr' ? "Carte" : "Map" }}</router-link>
-      <router-link to="/dashboard">{{ lang === 'fr' ? "Tableau de Bord" : "Dashboard" }}</router-link>
-      <router-link to="/option">{{ lang=== 'fr' ? "Paramètre" : "Option" }} </router-link>
-      <router-link to="/about">{{ lang === 'fr' ? "À propos" : "About" }}</router-link>
-    </nav>
+        <nav class="nav-links">
+            <router-link to="/">{{ lang === 'fr' ? "Accueil" : "Home" }}</router-link>
+            <router-link to="/upload">{{ lang === 'fr' ? "Image" : "Upload" }}</router-link>
+            <router-link to="/map">{{ lang === 'fr' ? "Carte" : "Map" }}</router-link>
+            <router-link to="/dashboard">{{ lang === 'fr' ? "Tableau de Bord" : "Dashboard" }}</router-link>
 
-    <div class="navbar-actions">
-      <button class="theme-btn" @click="$emit('toggle-theme')">
-        {{ isDark ? "☀️" : "🌙" }}
-      </button>
+            <router-link v-if="user && (user.role === 'admin' || user.role === 'agent')" to="/option">
+                {{ lang === 'fr' ? "Paramètre" : "Option" }}
+            </router-link>
 
-      <!-- 🌐 Bouton langue -->
-      <button class="theme-btn" @click="$emit('toggle-lang')">
-        {{ lang === 'fr' ? "EN" : "FR" }}
-      </button>
+            <router-link to="/about">{{ lang === 'fr' ? "À propos" : "About" }}</router-link>
+        </nav>
 
-      <template v-if="user">
-        <span class="user-info">
-          {{ lang === 'fr' ? "Bienvenue" : "Welcome" }}, {{ user.nom_utilisateur }}
-        </span>
-        <button class="login-btn" @click="logout">
-          {{ lang === 'fr' ? "Déconnexion" : "Logout" }}
-        </button>
-      </template>
+        <div class="navbar-actions">
+            <button class="theme-btn" @click="$emit('toggle-theme')">
+                {{ isDark ? "☀️" : "🌙" }}
+            </button>
 
-      <template v-else>
-        <button class="login-btn" @click="$emit('open-login')">
-          {{ lang === 'fr' ? "Connexion / Inscription" : "Login / Sign Up" }}
-        </button>
-      </template>
-    </div>
-  </header>
+            <!-- 🌐 Bouton langue -->
+            <button class="theme-btn" @click="$emit('toggle-lang')">
+                {{ lang === 'fr' ? "EN" : "FR" }}
+            </button>
+
+            <template v-if="user">
+                <span class="user-info">
+                    {{ lang === 'fr' ? "Bienvenue" : "Welcome" }}, {{ user.nom_utilisateur }}
+                </span>
+                <button class="login-btn" @click="logout">
+                    {{ lang === 'fr' ? "Déconnexion" : "Logout" }}
+                </button>
+            </template>
+
+            <template v-else>
+                <button class="login-btn" @click="$emit('open-login')">
+                    {{ lang === 'fr' ? "Connexion / Inscription" : "Login / Sign Up" }}
+                </button>
+            </template>
+        </div>
+    </header>
 </template>
 
 <script setup>
@@ -54,8 +58,9 @@ const { isDark, user, lang } = defineProps({
 const router = useRouter()
 
 function logout() {
-  localStorage.removeItem('user')
-  router.go() // rafraîchit la page
+  localStorage.removeItem('user');
+  localStorage.removeItem('role');
+  router.go(); // ou router.push('/') pour forcer un retour à l’accueil
 }
 </script>
 

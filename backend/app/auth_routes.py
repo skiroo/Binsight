@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from app.extensions import bcrypt
 from database.utils.db_model import db, Utilisateur, CleAcces
 from database.utils.db_insert import ajouter_utilisateur
+import uuid
 
 auth_routes = Blueprint('auth', __name__)
 
@@ -64,3 +65,16 @@ def login():
         }), 200
 
     return jsonify({'error': 'Email ou mot de passe incorrect'}), 401
+
+@auth_routes.route('/generate-agent-key', methods=['POST'])
+def generate_agent_key():
+    role = request.headers.get('Role')
+    if role != 'admin':
+        return jsonify({"error": "Unauthorized"}), 403
+
+    cle = str(uuid.uuid4())
+    new_key = CleAcces(cle=cle, role='agent')
+    db.session.add(new_key)
+    db.session.commit()
+
+    return jsonify({"cle": cle})
