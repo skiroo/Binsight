@@ -33,4 +33,22 @@ export async function getAlerts(periode = 'day', start = null, end = null) {
   return await API.get(url);
 }
 
+// Récupérer tous les groupes de règles
+export const getRuleGroups = () =>
+  API.get('/api/rule-groups');
+
+// Ajouter un nouveau groupe de règles
+export const addRuleGroup = (data) =>
+  API.post('/api/rule-groups', data);
+
+// Modifier un groupe de règles
+export const updateRuleGroup = (id, data) =>
+  API.put(`/api/rule-groups/${id}`, data);
+
+// Supprimer un groupe de règles
+export const deleteRuleGroup = (id) =>
+  API.delete(`/api/rule-groups/${id}`);
+
+
+
 export default API;

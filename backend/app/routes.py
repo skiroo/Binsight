@@ -505,6 +505,83 @@ def get_alerts():
 
     return jsonify({'alertes': alerts, 'seuil': seuil})
 
+# === Ajouter un groupe de règles ===
+@routes.route('/api/rule-groups', methods=['POST'])
+def add_rule_group():
+    data = request.get_json()
+    nom = data.get('nom')
+    description = data.get('description', '')
+
+    if not nom:
+        return jsonify({'error': 'Le champ nom est obligatoire'}), 400
+
+    groupe = GroupeRegles(nom=nom, description=description)
+    db.session.add(groupe)
+    db.session.commit()
+    return jsonify({'message': 'Groupe ajouté', 'id': groupe.id}), 201
+
+# === Modifier un groupe de règles ===
+@routes.route('/api/rule-groups/<int:group_id>', methods=['PUT'])
+def update_rule_group(group_id):
+    groupe = GroupeRegles.query.get(group_id)
+    if not groupe:
+        return jsonify({'error': 'Groupe non trouvé'}), 404
+
+    data = request.get_json()
+    groupe.nom = data.get('nom', groupe.nom)
+    groupe.description = data.get('description', groupe.description)
+    db.session.commit()
+    return jsonify({'message': 'Groupe mis à jour'})
+
+# === Supprimer un groupe de règles ===
+@routes.route('/api/rule-groups/<int:group_id>', methods=['DELETE'])
+def delete_rule_group(group_id):
+    groupe = GroupeRegles.query.get(group_id)
+    if not groupe:
+        return jsonify({'error': 'Groupe non trouvé'}), 404
+
+    # Optionnel : supprimer toutes les règles associées
+    for regle in groupe.regles:
+        db.session.delete(regle)
+    db.session.delete(groupe)
+    db.session.commit()
+    return jsonify({'message': 'Groupe et règles associées supprimés'})
+
+
+# === Lister les règles d’un groupe ===
+@routes.route('/api/rule-groups/<int:group_id>/rules', methods=['GET'])
+def get_rules_by_group(group_id):
+    regles = RegleClassification.query.filter_by(groupe_id=group_id).all()
+    return jsonify([{
+        'id': r.id,
+        'nom': r.nom_regle,
+        'condition': r.condition_rc,
+        'description': r.description_rc,
+        'active': r.active
+    } for r in regles])
+
+# === Ajouter une règle dans un groupe ===
+@routes.route('/api/rule-groups/<int:group_id>/rules', methods=['POST'])
+def add_rule_to_group(group_id):
+    data = request.get_json()
+    nom = data.get('nom')
+    condition = data.get('condition')
+    description = data.get('description', "")
+    active = data.get('active', True)
+
+    if not nom or not condition:
+        return jsonify({'error': 'Champs nom et condition obligatoires'}), 400
+
+    rule = RegleClassification(
+        nom_regle=nom,
+        condition_rc=condition,
+        description_rc=description,
+        active=active,
+        groupe_id=group_id
+    )
+    db.session.add(rule)
+    db.session.commit()
+    return jsonify({'message': 'Règle ajoutée', 'id': rule.id}), 201
 
 # ============================================================================
 

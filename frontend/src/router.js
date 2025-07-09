@@ -4,6 +4,7 @@ import Home from './pages/Home.vue';
 import Upload from './pages/Upload.vue';
 import Dashboard from './pages/Dashboard.vue';
 import Map from './pages/Map.vue';
+import Option from './pages/Option.vue';
 import About from './pages/About.vue';
 
 const routes = [
@@ -29,6 +30,12 @@ const routes = [
         path: '/map',
         name: 'Map',
         component: Map
+    },
+
+    {
+        path: '/option',
+        name: 'Option',
+        component : Option
     },
 
     {

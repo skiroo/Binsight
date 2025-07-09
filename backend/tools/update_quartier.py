@@ -1,5 +1,5 @@
 from app.app import create_app
-from database.utils.db_model import db, Localisation
+from database.utils.db_model import db, Localisation, Image
 import requests
 import time
 
@@ -16,15 +16,21 @@ def get_arrondissement(lat, lon):
         print(f"❌ Erreur géocodage ({lat}, {lon}):", e)
     return None
 
-def update_localisation_quartiers():
+def update_localisation_quartiers_last_40():
     app = create_app()
     with app.app_context():
+        # Récupérer les 40 dernières images id par ordre décroissant
+        last_40_images = db.session.query(Image.id).order_by(Image.id.desc()).limit(40).all()
+        last_40_ids = [i[0] for i in last_40_images]
+
+        # Récupérer localisations liées à ces images avec lat/lon non null
         localisations = Localisation.query.filter(
+            Localisation.image_id.in_(last_40_ids),
             Localisation.latitude.isnot(None),
             Localisation.longitude.isnot(None)
         ).all()
 
-        print(f"🔍 {len(localisations)} localisations à vérifier...")
+        print(f"🔍 {len(localisations)} localisations des 40 dernières images à vérifier...")
 
         for loc in localisations:
             arrondissement = get_arrondissement(loc.latitude, loc.longitude)
@@ -47,4 +53,4 @@ def update_localisation_quartiers():
             time.sleep(1)  # Respect Nominatim : 1 requête/sec
 
 if __name__ == "__main__":
-    update_localisation_quartiers()
+    update_localisation_quartiers_last_40()

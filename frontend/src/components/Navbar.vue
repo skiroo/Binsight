@@ -10,6 +10,7 @@
       <router-link to="/upload">{{ lang === 'fr' ? "Image" : "Upload" }}</router-link>
       <router-link to="/map">{{ lang === 'fr' ? "Carte" : "Map" }}</router-link>
       <router-link to="/dashboard">{{ lang === 'fr' ? "Tableau de Bord" : "Dashboard" }}</router-link>
+      <router-link to="/option">{{ lang=== 'fr' ? "Paramètre" : "Option" }} </router-link>
       <router-link to="/about">{{ lang === 'fr' ? "À propos" : "About" }}</router-link>
     </nav>
 

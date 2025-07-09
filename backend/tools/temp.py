@@ -2,10 +2,10 @@ import csv
 from app.app import create_app
 from database.utils.db_model import db, Image, Localisation, CaracteristiquesImage
 
-def export_data_to_csv(filename='export_images.csv'):
+def export_last_40_images_to_csv(filename='export_last_40_images.csv'):
     app = create_app()
     with app.app_context():
-        # Requête pour récupérer les données en faisant les jointures
+        # Requête : 40 dernières images par id décroissant
         rows = db.session.query(
             Image.id,
             Image.fichier_nom,
@@ -31,7 +31,12 @@ def export_data_to_csv(filename='export_images.csv'):
             CaracteristiquesImage.texture_score
         ).outerjoin(Localisation, Image.id == Localisation.image_id)\
          .outerjoin(CaracteristiquesImage, Image.id == CaracteristiquesImage.id)\
+         .order_by(Image.id.desc())\
+         .limit(40)\
          .all()
+
+        # Inverse l'ordre pour avoir du plus petit au plus grand id (optionnel)
+        rows = list(reversed(rows))
 
         with open(filename, 'w', newline='', encoding='utf-8') as csvfile:
             writer = csv.writer(csvfile)
@@ -47,7 +52,7 @@ def export_data_to_csv(filename='export_images.csv'):
             for r in rows:
                 writer.writerow(r)
 
-        print(f"Export terminé dans le fichier {filename}")
+        print(f"Export des 40 dernières images terminé dans le fichier {filename}")
 
 if __name__ == '__main__':
-    export_data_to_csv()
+    export_last_40_images_to_csv()
