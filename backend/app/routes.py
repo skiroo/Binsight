@@ -1,14 +1,16 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, Response, request, jsonify
 from PIL import Image as PILImage
 from werkzeug.utils import secure_filename
 from sqlalchemy import and_
 from datetime import datetime, timedelta
 import requests
+import csv, io
 import os
 
 from app.utils.rules import appliquer_regles_sur_image
+from app.utils.criticite import calculer_criticite
 from app.extensions import bcrypt
-from database.utils.db_model import db, Image, RegleClassification, GroupeRegles, CaracteristiquesImage, Utilisateur, Localisation
+from database.utils.db_model import db, Image, RegleClassification, GroupeRegles, CaracteristiquesImage, Utilisateur, Localisation, Criticite
 from database.utils.db_insert import traiter_image
 
 routes = Blueprint('routes', __name__)
@@ -87,17 +89,56 @@ def upload_image():
             db.session.add(localisation)
             db.session.commit()
 
+        # 🔁 Récupérer météo et calculer criticité
+        pluie = None
+        criticite = 0
+        if latitude and longitude:
+            try:
+                météo_url = f"https://api.open-meteo.com/v1/forecast?latitude={latitude}&longitude={longitude}&hourly=precipitation&timezone=auto"
+                res = requests.get(météo_url)
+                if res.ok:
+                    data = res.json()
+                    now = datetime.now().strftime('%Y-%m-%dT%H:00')
+                    index = data['hourly']['time'].index(now)
+                    pluie = data['hourly']['precipitation'][index]
+                    criticite = calculer_criticite(img_obj.etat_annot or label, pluie)
+            except Exception as e:
+                print("Erreur météo :", e)
+
+        # 🔁 Enregistrer criticité
+        db.session.add(Criticite(
+            image_id=image_id,
+            etat=img_obj.etat_annot or label,
+            pluie=pluie,
+            criticite=criticite
+        ))
+        db.session.commit()
+
         return jsonify({
             'message': msg,
             'image_id': image_id,
             'classification_auto': label,
-            'quartier': quartier
+            'quartier': quartier,
+            'criticite': criticite
         })
 
     finally:
         if os.path.exists(save_path):
             os.remove(save_path)
 
+
+@routes.route('/api/criticite/<int:image_id>', methods=['GET'])
+def get_criticite(image_id):
+    crit = Criticite.query.filter_by(image_id=image_id).order_by(Criticite.date.desc()).first()
+    if not crit:
+        return jsonify({'error': 'Criticité non trouvée'}), 404
+    return jsonify({
+        'image_id': image_id,
+        'etat': crit.etat,
+        'pluie': crit.pluie,
+        'criticite': crit.criticite,
+        'date': crit.date.isoformat()
+    })
             
 
 @routes.route('/update/<int:image_id>', methods=['POST'])
@@ -392,7 +433,7 @@ def verify_data():
 
 @routes.route('/api/localisations', methods=['GET'])
 def get_all_localisations():
-    localisations = Localisation.query.join(Image).all()
+    localisations = db.session.query(Localisation).join(Image).outerjoin(Criticite).all()
     result = []
 
     for loc in localisations:
@@ -407,6 +448,7 @@ def get_all_localisations():
                 'id': loc.image_id,
                 'date_upload': loc.image.date_upload.isoformat(),
                 'source': loc.image.source,
+                'criticite': loc.image.criticites[-1].criticite if loc.image.criticites else 0
             })
 
     return jsonify(result)
@@ -455,55 +497,66 @@ def get_arrondissement_from_coords(lat, lon):
 
 @routes.route('/api/alerts', methods=['GET'])
 def get_alerts():
-    seuil = 5
+    seuil_poubelles = 5
+    seuil_criticite_moyenne = 2
+    seuil_criticite_max = 3
+
     alerts = []
 
-    periode = request.args.get('periode', 'all')  # <-- par défaut 'all' pour tout prendre
+    periode = request.args.get('periode', 'all')
     date_min = request.args.get('date_min')
     date_max = request.args.get('date_max')
 
-    query = db.session.query(
-        Localisation.quartier,
-        db.func.count(Image.id),
-        db.func.avg(Localisation.latitude),
-        db.func.avg(Localisation.longitude)
-    ).join(Image).filter(Image.etat_annot == 'dirty')
+    # Sous-requête : on filtre les criticités reliées aux poubelles pleines
+    subquery = db.session.query(
+        Localisation.quartier.label("quartier"),
+        db.func.count(Image.id).label("nb_dirty"),
+        db.func.avg(Criticite.criticite).label("criticite_moy"),
+        db.func.max(Criticite.criticite).label("criticite_max"),
+        db.func.avg(Localisation.latitude).label("lat"),
+        db.func.avg(Localisation.longitude).label("lon")
+    ).join(Image, Image.id == Localisation.image_id) \
+     .outerjoin(Criticite, Image.id == Criticite.image_id) \
+     .filter(Image.etat_annot == 'dirty')
 
+    # Périodes
     if periode == 'day':
         today = datetime.today().date()
-        query = query.filter(db.func.date(Image.date_upload) == today)
+        subquery = subquery.filter(db.func.date(Image.date_upload) == today)
     elif periode == 'week':
         week_ago = datetime.today().date() - timedelta(days=6)
-        query = query.filter(db.func.date(Image.date_upload) >= week_ago)
+        subquery = subquery.filter(db.func.date(Image.date_upload) >= week_ago)
     elif periode == 'month':
         month_ago = datetime.today().date() - timedelta(days=29)
-        query = query.filter(db.func.date(Image.date_upload) >= month_ago)
+        subquery = subquery.filter(db.func.date(Image.date_upload) >= month_ago)
     elif periode == 'custom' and date_min and date_max:
         try:
             dmin = datetime.strptime(date_min, '%Y-%m-%d').date()
             dmax = datetime.strptime(date_max, '%Y-%m-%d').date()
-            query = query.filter(and_(
+            subquery = subquery.filter(and_(
                 db.func.date(Image.date_upload) >= dmin,
                 db.func.date(Image.date_upload) <= dmax
             ))
         except ValueError:
-            return jsonify({'alertes': [], 'seuil': seuil})
-    elif periode == 'all':
-        # Pas de filtre date, on prend tout
-        pass
+            return jsonify({'alertes': [], 'seuil': seuil_poubelles})
 
-    results = query.group_by(Localisation.quartier).all()
+    results = subquery.group_by(Localisation.quartier).all()
 
-    for quartier, count, lat_avg, lon_avg in results:
-        if quartier and count >= seuil and lat_avg and lon_avg:
-            alerts.append({
-                'quartier': quartier,
-                'nb_dirty': count,
-                'latitude': float(lat_avg),
-                'longitude': float(lon_avg)
-            })
+    for quartier, nb_dirty, criticite_moy, criticite_max, lat, lon in results:
+        if quartier and nb_dirty >= seuil_poubelles:
+            if criticite_max and criticite_max >= seuil_criticite_max or \
+               criticite_moy and criticite_moy >= seuil_criticite_moyenne:
+                alerts.append({
+                    'quartier': quartier,
+                    'nb_dirty': nb_dirty,
+                    'criticite_moy': round(criticite_moy, 2) if criticite_moy else None,
+                    'criticite_max': criticite_max,
+                    'latitude': lat,
+                    'longitude': lon
+                })
 
-    return jsonify({'alertes': alerts, 'seuil': seuil})
+    return jsonify({'alertes': alerts, 'seuil_poubelles': seuil_poubelles})
+
 
 # === Ajouter un groupe de règles ===
 @routes.route('/api/rule-groups', methods=['POST'])
@@ -582,6 +635,101 @@ def add_rule_to_group(group_id):
     db.session.add(rule)
     db.session.commit()
     return jsonify({'message': 'Règle ajoutée', 'id': rule.id}), 201
+
+@routes.route('/export/custom', methods=['GET'])
+def export_custom():
+    tables = request.args.get('tables', '').split(',')
+    date_min = request.args.get('date_min')
+    date_max = request.args.get('date_max')
+    etat = request.args.get('etat')
+    source = request.args.get('source')
+    quartier = request.args.get('quartier')
+
+    # Base query
+    query = db.session.query(Image)\
+        .outerjoin(CaracteristiquesImage)\
+        .outerjoin(Localisation)\
+        .outerjoin(Utilisateur)
+
+    if date_min and date_max:
+        try:
+            dmin = datetime.strptime(date_min, '%Y-%m-%d').date()
+            dmax = datetime.strptime(date_max, '%Y-%m-%d').date()
+            query = query.filter(and_(
+                db.func.date(Image.date_upload) >= dmin,
+                db.func.date(Image.date_upload) <= dmax
+            ))
+        except:
+            return jsonify({'error': 'Format de date invalide'}), 400
+
+    if etat:
+        query = query.filter(Image.etat_annot == etat)
+
+    if source:
+        query = query.filter(Image.source == source)
+    if quartier:
+        query = query.join(Localisation).filter(Localisation.quartier.ilike(f"%{quartier}%"))
+
+    images = query.all()
+
+    # Génération CSV
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    # Définir les colonnes selon les tables cochées
+    header = []
+    if 'image' in tables:
+        header += ['image_id', 'fichier_nom', 'etat_annot', 'date_upload']
+    if 'caracteristiques' in tables:
+        header += ['taille_ko', 'hauteur', 'largeur', 'moyenne_rouge', 'luminance_moyenne']
+    if 'localisation' in tables:
+        header += ['quartier', 'latitude', 'longitude', 'ville', 'code_postal']
+    if 'utilisateur' in tables:
+        header += ['utilisateur_id', 'nom_utilisateur', 'email', 'role']
+
+    writer.writerow(header)
+
+    for img in images:
+        row = []
+
+        if 'image' in tables:
+            row += [img.id, img.fichier_nom, img.etat_annot, img.date_upload.isoformat()]
+
+        if 'caracteristiques' in tables:
+            c = img.caracteristiques
+            row += [
+                c.taille_ko if c else '',
+                c.hauteur if c else '',
+                c.largeur if c else '',
+                c.moyenne_rouge if c else '',
+                c.luminance_moyenne if c else ''
+            ]
+
+        if 'localisation' in tables:
+            l = img.localisation
+            row += [
+                l.quartier if l else '',
+                l.latitude if l else '',
+                l.longitude if l else '',
+                l.ville if l else '',
+                l.code_postal if l else ''
+            ]
+
+        if 'utilisateur' in tables:
+            u = img.utilisateur
+            row += [
+                u.id if u else '',
+                u.nom_utilisateur if u else '',
+                u.email if u else '',
+                u.role if u else ''
+            ]
+
+        writer.writerow(row)
+
+    output.seek(0)
+    return Response(output, mimetype='text/csv', headers={
+        "Content-Disposition": "attachment; filename=export_custom.csv"
+    })
 
 # ============================================================================
 

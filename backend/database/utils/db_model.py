@@ -26,6 +26,7 @@ class Image(db.Model):
     classification_auto = db.Column(db.Text)  # dirty / clean
 
     utilisateur = db.relationship('Utilisateur', backref=db.backref('images', lazy=True))
+    criticites = db.relationship("Criticite", back_populates="image", cascade="all, delete-orphan")
 
 # === Table des caractéristiques extraites ===
 class CaracteristiquesImage(db.Model):
@@ -88,3 +89,14 @@ class CleAcces(db.Model):
     cle = db.Column(db.Text, unique=True, nullable=False)
     valide = db.Column(db.Boolean, default=True)
     role = db.Column(db.Text, default='agent')
+
+# === Table des criticités ===
+class Criticite(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    image_id = db.Column(db.Integer, db.ForeignKey('images.id'), nullable=False)
+    date = db.Column(db.DateTime, default=datetime.utcnow)
+    etat = db.Column(db.String(20))
+    pluie = db.Column(db.Float)
+    criticite = db.Column(db.Integer)  # de 0 (faible) à 3 (critique)
+
+    image = db.relationship("Image", back_populates="criticites")

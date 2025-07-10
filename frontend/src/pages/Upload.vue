@@ -2,18 +2,30 @@
   <div class="upload-container">
     <h2>{{ lang === 'fr' ? "Téléversement d'une image" : "Upload an image" }}</h2>
 
-    <label for="groupe">
-  {{ lang === 'fr' ? 'Groupe de règles :' : 'Rule group:' }}
-</label>
+    <!-- Groupe de règles -->
+    <label for="groupe">{{ lang === 'fr' ? 'Groupe de règles :' : 'Rule group:' }}</label>
     <select v-model="selectedGroupe" required>
       <option v-for="g in groupes" :key="g.id" :value="g.id">
-    {{ lang === 'fr' ? g.nom_fr || g.nom : g.nom_en || g.nom }}
-  </option>
+        {{ lang === 'fr' ? g.nom_fr || g.nom : g.nom_en || g.nom }}
+      </option>
     </select>
 
+    <!-- Upload fichier -->
     <input type="file" @change="handleImageUpload" accept="image/*" />
+
+    <!-- Caméra -->
     <div :class="['camera-toggle', { active: cameraActive }]" @click="toggleCamera">
       <img src="@/assets/camera.png" alt="Camera" />
+    </div>
+
+    <!-- Sélecteur de caméra -->
+    <div v-if="cameraActive" style="margin-top: 10px;">
+      <label>{{ lang === 'fr' ? "Choisir la caméra :" : "Choose camera:" }}</label>
+      <select v-model="selectedCameraId">
+        <option v-for="device in videoDevices" :key="device.deviceId" :value="device.deviceId">
+          {{ device.label || (lang === 'fr' ? "Caméra inconnue" : "Unknown camera") }}
+        </option>
+      </select>
     </div>
 
     <video ref="video" autoplay playsinline style="display:none; width: 100%; margin-top: 10px;"></video>
@@ -22,15 +34,18 @@
     </div>
     <canvas ref="canvas" style="display:none;"></canvas>
 
+    <!-- Chargement -->
     <div v-if="loading">
       <p>{{ lang === 'fr' ? "Classification automatique en cours..." : "Automatic classification in progress..." }}</p>
       <div class="loader"></div>
     </div>
 
+    <!-- Aperçu -->
     <div v-if="imagePreview && !loading">
       <img :src="imagePreview" alt="Preview" class="preview" />
     </div>
 
+    <!-- État -->
     <div v-if="etat && !loading">
       <p>
         <strong>{{ lang === 'fr' ? "État" : "Status" }} :</strong>
@@ -44,11 +59,13 @@
       </p>
     </div>
 
+    <!-- Annotation -->
     <div v-if="imageId && !loading">
       <label><input type="radio" value="dirty" v-model="etatAnnot" /> {{ lang === 'fr' ? "Pleine" : "Full" }}</label>
       <label><input type="radio" value="clean" v-model="etatAnnot" /> {{ lang === 'fr' ? "Vide" : "Empty" }}</label>
     </div>
 
+    <!-- Adresse -->
     <h3>{{ lang === 'fr' ? "Adresse" : "Address" }}</h3>
     <input
       v-model="adresseComplete"
@@ -61,11 +78,14 @@
       </li>
     </ul>
 
+    <!-- Carte -->
     <div id="map" style="height: 300px; margin-top: 10px;"></div>
     <p>Latitude : {{ localisation.lat }}, Longitude : {{ localisation.lon }}</p>
 
+    <!-- Bouton submit -->
     <button @click="submit" :disabled="loading || !image">{{ lang === 'fr' ? "Valider" : "Submit" }}</button>
 
+    <!-- Message de succès -->
     <transition name="fade">
       <p v-if="message" class="success-msg">{{ message }}</p>
     </transition>
@@ -75,7 +95,7 @@
 <script>
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import API from '@/services/api';  // Assure-toi que ton API est configuré ici
+import API from '@/services/api';
 
 export default {
   props: ['lang'],
@@ -116,7 +136,6 @@ export default {
       try {
         const res = await API.get('/api/rule-groups');
         this.groupes = res.data;
-        // Sélection automatique du groupe id=1 ou premier groupe dispo
         const defaultGroup = this.groupes.find(g => g.id === 1) || this.groupes[0];
         if (defaultGroup) {
           this.selectedGroupe = defaultGroup.id;
@@ -132,12 +151,9 @@ export default {
     },
     async processImage(file) {
       this.message = '';
-
       if (this.imageId) {
         try {
-          await fetch(`http://localhost:5000/delete_temp/${this.imageId}`, {
-            method: 'DELETE'
-          });
+          await fetch(`http://localhost:5000/delete_temp/${this.imageId}`, { method: 'DELETE' });
         } catch (err) {
           console.error('Erreur suppression image précédente :', err);
         }
@@ -156,8 +172,6 @@ export default {
       formData.append('mode_classification', 'auto');
       formData.append('utilisateur_id', user?.id || '');
       formData.append('source', user?.role || 'citoyen');
-
-      // Ajout du groupe de règles choisi
       formData.append('groupe_id', this.selectedGroupe);
 
       fetch('http://localhost:5000/upload', {
@@ -169,20 +183,13 @@ export default {
           this.imageId = data.image_id;
           this.etat = data.classification_auto;
           this.etatAnnot = data.classification_auto;
-
-          if (data.classification_auto === 'non déterminé') {
-            this.message = this.lang === 'fr'
-              ? 'Classification non déterminée. Veuillez annoter manuellement.'
-              : 'Automatic classification failed. Please annotate manually.';
-          } else {
-            this.message = data.message || '';
-          }
+          this.message = data.classification_auto === 'non déterminé'
+            ? (this.lang === 'fr' ? 'Classification non déterminée. Veuillez annoter manuellement.' : 'Classification failed. Please annotate manually.')
+            : (data.message || '');
         })
         .catch(err => {
           console.error('Erreur classification :', err);
-          this.message = this.lang === 'fr'
-            ? "Erreur lors de la classification."
-            : "Classification error.";
+          this.message = this.lang === 'fr' ? "Erreur lors de la classification." : "Classification error.";
         })
         .finally(() => {
           this.loading = false;
@@ -190,24 +197,40 @@ export default {
     },
     toggleCamera() {
       if (this.cameraActive) {
-        const stream = this.$refs.video?.srcObject;
-        if (stream) {
-          stream.getTracks().forEach(track => track.stop());
-        }
-        this.$refs.video.srcObject = null;
-        this.cameraActive = false;
-        this.$refs.video.style.display = 'none';
+        this.stopCamera();
       } else {
-        navigator.mediaDevices.getUserMedia({ video: true })
-          .then(stream => {
+        navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: 'environment' }
+          }
+        })
+        .then(stream => {
+          this.$refs.video.srcObject = stream;
+          this.$refs.video.style.display = 'block';
+          this.cameraActive = true;
+        })
+        .catch(err => {
+          console.warn("Erreur caméra arrière, fallback caméra frontale :", err);
+          return navigator.mediaDevices.getUserMedia({ video: true });
+        })
+        .then(stream => {
+          if (stream) {
             this.$refs.video.srcObject = stream;
             this.$refs.video.style.display = 'block';
             this.cameraActive = true;
-          })
-          .catch(err => {
-            console.error("Erreur caméra :", err);
-          });
+          }
+        })
+        .catch(err => {
+          console.error("Erreur d'accès à la caméra :", err);
+        });
       }
+    },
+    stopCamera() {
+      const stream = this.$refs.video?.srcObject;
+      if (stream) stream.getTracks().forEach(track => track.stop());
+      this.$refs.video.srcObject = null;
+      this.cameraActive = false;
+      this.$refs.video.style.display = 'none';
     },
     capturePhoto() {
       const video = this.$refs.video;
@@ -221,11 +244,9 @@ export default {
         navigator.geolocation.getCurrentPosition(position => {
           this.localisation.lat = position.coords.latitude;
           this.localisation.lon = position.coords.longitude;
-
           const file = new File([blob], "captured.jpg", { type: "image/jpeg" });
           this.processImage(file);
         });
-
         this.stopCamera();
       }, "image/jpeg");
     },
@@ -280,29 +301,30 @@ export default {
         .then(data => {
           this.message = data.message || (this.lang === 'fr' ? 'Annotation mise à jour' : 'Annotation updated');
           setTimeout(() => this.message = '', 4000);
-
-          // Réinitialisation
-          this.image = null;
-          this.imageId = null;
-          this.imagePreview = null;
-          this.etat = '';
-          this.etatAnnot = '';
-          this.adresseComplete = '';
-          this.localisation = {
-            rue_num: '',
-            rue_nom: '',
-            cp: '',
-            ville: '',
-            pays: '',
-            lat: '',
-            lon: ''
-          };
-          this.suggestions = [];
+          this.resetForm();
         })
         .catch(err => {
           console.error('Erreur :', err);
           this.message = this.lang === 'fr' ? 'Erreur lors de la mise à jour.' : 'Update error.';
         });
+    },
+    resetForm() {
+      this.image = null;
+      this.imageId = null;
+      this.imagePreview = null;
+      this.etat = '';
+      this.etatAnnot = '';
+      this.adresseComplete = '';
+      this.localisation = {
+        rue_num: '',
+        rue_nom: '',
+        cp: '',
+        ville: '',
+        pays: '',
+        lat: '',
+        lon: ''
+      };
+      this.suggestions = [];
     },
     initMap() {
       this.map = L.map('map').setView([48.8566, 2.3522], 13);
@@ -324,16 +346,6 @@ export default {
           this.localisation.lon = position.coords.longitude;
         });
       }
-    },
-    stopCamera() {
-      if (!this.cameraActive) return;
-      const stream = this.$refs.video?.srcObject;
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
-      this.$refs.video.srcObject = null;
-      this.cameraActive = false;
-      this.$refs.video.style.display = 'none';
     }
   }
 };
